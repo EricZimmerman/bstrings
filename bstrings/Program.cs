@@ -310,7 +310,7 @@ namespace bstrings
 
             const string ascRange = "[\x20-\x7E]";
             var regUni = new Regex($"{ascRange}{mi2}");
-            var uniString = Encoding.UTF7.GetString(bytes);
+            var uniString = Encoding.UTF8.GetString(bytes);
 
             return (from Match match in regUni.Matches(uniString) select match.Value.Trim()).ToList();
         }
