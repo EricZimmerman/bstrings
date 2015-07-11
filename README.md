@@ -6,7 +6,7 @@ NOTE: bstrings currently doesn't support files > 2GB. I will add support for lar
 
     λ .\bstrings.exe
   
-    bstrings version 0.8.0.0
+    bstrings version 0.9.0.0
   
     Author: Eric Zimmerman (saericzimmerman@gmail.com)
     https://github.com/EricZimmerman/bstrings
