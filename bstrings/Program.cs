@@ -17,9 +17,12 @@ namespace bstrings
         private static Logger _logger;
         private static Stopwatch _sw;
 
+        private static Dictionary<string, string> _regExPatterns = new Dictionary<string, string>(); 
+
         private static void Main(string[] args)
         {
             SetupNLog();
+            SetupPatterns();
 
             _logger = LogManager.GetCurrentClassLogger();
 
@@ -47,6 +50,9 @@ namespace bstrings
 
             p.Setup(arg => arg.MaximumLength)
                 .As('x').SetDefault(-1).WithDescription("Maximum string length. Default is unlimited");
+
+            p.Setup(arg => arg.GetPatterns)
+    .As('p').SetDefault(false).WithDescription("Display list of built in regular expressions");
 
             p.Setup(arg => arg.LookForString)
                 .As("ls")
@@ -77,6 +83,20 @@ namespace bstrings
 
             if (result.HelpCalled)
             {
+                return;
+            }
+
+            if (p.Object.GetPatterns)
+            {
+                _logger.Info("Name: Value");
+                foreach (var regExPattern in _regExPatterns)
+                {
+                    _logger.Info($"{regExPattern.Key}:\t{regExPattern.Value}");
+                }
+
+                _logger.Info("");
+                _logger.Info("To use a built in pattern, supply the Name to the --lr switch");
+
                 return;
             }
 
@@ -141,7 +161,14 @@ namespace bstrings
 
             _sw.Stop();
 
-            var reg = new Regex(p.Object.LookForRegex, RegexOptions.IgnoreCase & RegexOptions.Compiled);
+            var regPattern = p.Object.LookForRegex;
+
+            if (_regExPatterns.ContainsKey(p.Object.LookForRegex))
+            {
+                regPattern = _regExPatterns[p.Object.LookForRegex];
+            }
+
+            var reg = new Regex(regPattern, RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
 
             //set up highlighting
             var words = new HashSet<string>();
@@ -151,14 +178,15 @@ namespace bstrings
             }
             else if (p.Object.LookForRegex.Length > 0)
             {
-                words.Add(p.Object.LookForRegex);
+                words.Add(regPattern);
             }
 
-            AddHighlightingRules(words.ToList(), p.Object.LookForRegex.Length>0);
+            AddHighlightingRules(words.ToList(), regPattern.Length>0);
 
             foreach (var hit in set)
             {
-                if (hit.Trim().Length == 0)
+             
+                if (hit.Length == 0)
                 {
                     continue;
                 }
@@ -191,6 +219,32 @@ namespace bstrings
 
             _logger.Info("");
             _logger.Info($"Found {counter:N0} string{suffix} in {_sw.Elapsed.TotalSeconds:N3} seconds");
+        }
+
+        private static void SetupPatterns()
+        {
+            _regExPatterns.Add("ipv4", @"\b(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\b");
+            _regExPatterns.Add("ipv6", @"(?<![:.\w])(?:[A-F0-9]{1,4}:){7}[A-F0-9]{1,4}(?![:.\w])");
+            _regExPatterns.Add("email", @"\A\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,6}\b\z");
+            _regExPatterns.Add("zip", @"\A\b[0-9]{5}(?:-[0-9]{4})?\b\z");
+            _regExPatterns.Add("urlPort", @"^
+		[a-z][a-z0-9+\-.]*://               # Scheme
+		([a-z0-9\-._~%!$&'()*+,;=]+@)?      # User
+		(?<host>[a-z0-9\-._~%]+             # Named or IPv4 host
+		|\[[a-z0-9\-._~%!$&'()*+,;=:]+\])   # IPv6+ host
+		");
+            _regExPatterns.Add("url3986", @"^
+		[a-z][a-z0-9+\-.]*://                       # Scheme
+		([a-z0-9\-._~%!$&'()*+,;=]+@)?              # User
+		(?<host>[a-z0-9\-._~%]+                     # Named host
+		|\[[a-f0-9:.]+\]                            # IPv6 host
+		|\[v[a-f0-9][a-z0-9\-._~%!$&'()*+,;=:]+\])  # IPvFuture host
+		(:[0-9]+)?                                  # Port
+		(/[a-z0-9\-._~%!$&'()*+,;=:@]+)*/?          # Path
+		(\?[a-z0-9\-._~%!$&'()*+,;=:@/?]*)?         # Query
+		(\#[a-z0-9\-._~%!$&'()*+,;=:@/?]*)?         # Fragment
+		$");
+
         }
 
         private static void AddHighlightingRules(List<string> words, bool isRegEx = false)
@@ -246,7 +300,7 @@ namespace bstrings
             var regUni = new Regex($"{uniRange}{mi2}");
             var uniString = Encoding.Unicode.GetString(bytes);
 
-            return (from Match match in regUni.Matches(uniString) select match.Value).ToList();
+            return (from Match match in regUni.Matches(uniString) select match.Value.Trim()).ToList();
         }
 
         private static List<string> GetAsciiHits(byte[] bytes, int minSize, int maxSize)
@@ -258,7 +312,7 @@ namespace bstrings
             var regUni = new Regex($"{ascRange}{mi2}");
             var uniString = Encoding.UTF7.GetString(bytes);
 
-            return (from Match match in regUni.Matches(uniString) select match.Value).ToList();
+            return (from Match match in regUni.Matches(uniString) select match.Value.Trim()).ToList();
         }
 
         private static void SetupNLog()
@@ -294,5 +348,7 @@ namespace bstrings
         public bool ShowOffset { get; set; } = false;
         public bool SortLength { get; set; } = false;
         public bool SortAlpha { get; set; } = false;
+
+        public bool GetPatterns { get; set; } = false;
     }
 }
