@@ -79,7 +79,14 @@ namespace bstrings
                 "\r\n\r\nAuthor: Eric Zimmerman (saericzimmerman@gmail.com)" +
                 "\r\nhttps://github.com/EricZimmerman/bstrings";
 
-            p.SetupHelp("?", "help").WithHeader(header).Callback(text => _logger.Info(text));
+            var footer = @"Examples: bstrings.exe -f ""C:\Temp\UsrClass 1.dat"" --ls URL" + "\r\n\t " +
+                         @" bstrings.exe -f ""C:\Temp\someFile.txt"" --lr guid" + "\r\n\t " +
+                         @" bstrings.exe -f ""C:\Temp\someOtherFile.txt"" --lr cc -sa" + "\r\n\t " +
+                         @" bstrings.exe -f ""C:\Temp\someOtherFile.txt"" --lr cc -sa -m 15 -x 22" + "\r\n\t " +
+                         @" bstrings.exe -f ""C:\Temp\UsrClass 1.dat"" --ls mui -sl" + "\r\n\t ";
+
+            p.SetupHelp("?", "help").WithHeader(header).Callback(text => _logger.Info(text + "\r\n" + footer));
+
 
             var result = p.Parse(args);
 
@@ -126,6 +133,57 @@ namespace bstrings
 
             var hits = new List<string>();
 
+            var regPattern = p.Object.LookForRegex;
+
+            if (_regExPatterns.ContainsKey(p.Object.LookForRegex))
+            {
+                regPattern = _regExPatterns[p.Object.LookForRegex];
+            }
+
+            if (regPattern.Length > 0)
+            {
+                _logger.Info($"Searching via RegEx pattern: {regPattern}");
+                _logger.Info("");
+            }
+
+            if (p.Object.SaveTo.Length > 0)
+            {
+                var dir = Path.GetDirectoryName(p.Object.SaveTo);
+
+                if (dir != null && Directory.Exists(dir) == false)
+                {
+                    try
+                    {
+                        Directory.CreateDirectory(dir);
+                    }
+                    catch (Exception)
+                    {
+                        _logger.Warn($"Invalid path: '{p.Object.SaveTo}'. Results will not be saved to a file.");
+                        _logger.Info("");
+                        p.Object.SaveTo = string.Empty;
+
+                    }
+
+                }
+                else
+                {
+                    if (dir == null)
+                    {
+                        _logger.Warn($"Invalid path: '{p.Object.SaveTo}");
+                        p.Object.SaveTo = string.Empty;
+                    }
+                }
+
+                if (p.Object.SaveTo.Length > 0)
+                {
+                    _logger.Info($"Saving hits to '{p.Object.SaveTo}'");
+                    _logger.Info("");
+                }
+            }
+
+            _logger.Info("Searching...");
+            _logger.Info("");
+
             var minLength = 3;
             if (p.Object.MinimumLength > 0)
             {
@@ -166,53 +224,7 @@ namespace bstrings
 
         
 
-            var regPattern = p.Object.LookForRegex;
-
-            if (_regExPatterns.ContainsKey(p.Object.LookForRegex))
-            {
-                regPattern = _regExPatterns[p.Object.LookForRegex];
-            }
-
-            if (regPattern.Length > 0)
-            {
-                _logger.Info($"Searching via RegEx pattern: {regPattern}");
-                _logger.Info("");
-            }
-
-            if (p.Object.SaveTo.Length > 0)
-            {
-                var dir = Path.GetDirectoryName(p.Object.SaveTo);
-
-                if (dir != null && Directory.Exists(dir) == false)
-                {
-                    try
-                    {
-                        Directory.CreateDirectory(dir);
-                    }
-                    catch (Exception)
-                    {
-                        _logger.Warn($"Invalid path: '{p.Object.SaveTo}'. Results will not be saved to a file.");
-                        _logger.Info("");
-                        p.Object.SaveTo = string.Empty;
-
-                    }
-                  
-                }
-                else
-                {
-                    if (dir == null)
-                    {
-                        _logger.Warn($"Invalid path: '{p.Object.SaveTo}");
-                        p.Object.SaveTo = string.Empty;
-                    }
-                }
-
-                if (p.Object.SaveTo.Length > 0)
-                {
-                    _logger.Info($"Saving hits to '{p.Object.SaveTo}'");
-                    _logger.Info("");
-                }
-            }
+            
 
             var reg = new Regex(regPattern, RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
 
