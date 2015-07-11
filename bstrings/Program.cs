@@ -244,7 +244,7 @@ namespace bstrings
 
                 if (p.Object.LookForString.Length > 0 || p.Object.LookForRegex.Length > 0)
                 {
-                    if (p.Object.LookForString.Length > 0 && hit.Contains(p.Object.LookForString))
+                    if (p.Object.LookForString.Length > 0 && hit.IndexOf(p.Object.LookForString, StringComparison.InvariantCultureIgnoreCase) >= 0)
                     {
                         counter += 1;
                         _logger.Info(hit);

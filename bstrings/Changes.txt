@@ -3,7 +3,9 @@
 NEW: More RegEx patterns
 NEW: Show RegEx descriptions vs the pattern for -p
 NEW: Show the RegEx pattern being used in output
-NEW: SaveTo option now works (-o). Only the search hits will be saved to the file, not what is shown on the console.
+NEW: Save to option now works (-o). Only the search hits will be saved to the file, not what is shown on the console.
+
+CHANGE: When using --ls, make the search case insensitive
 
 TODO
 
