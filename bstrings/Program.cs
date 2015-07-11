@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -163,6 +164,8 @@ namespace bstrings
 
             _sw.Stop();
 
+        
+
             var regPattern = p.Object.LookForRegex;
 
             if (_regExPatterns.ContainsKey(p.Object.LookForRegex))
@@ -173,6 +176,42 @@ namespace bstrings
             if (regPattern.Length > 0)
             {
                 _logger.Info($"Searching via RegEx pattern: {regPattern}");
+                _logger.Info("");
+            }
+
+            if (p.Object.SaveTo.Length > 0)
+            {
+                var dir = Path.GetDirectoryName(p.Object.SaveTo);
+
+                if (dir != null && Directory.Exists(dir) == false)
+                {
+                    try
+                    {
+                        Directory.CreateDirectory(dir);
+                    }
+                    catch (Exception)
+                    {
+                        _logger.Warn($"Invalid path: '{p.Object.SaveTo}'. Results will not be saved to a file.");
+                        _logger.Info("");
+                        p.Object.SaveTo = string.Empty;
+
+                    }
+                  
+                }
+                else
+                {
+                    if (dir == null)
+                    {
+                        _logger.Warn($"Invalid path: '{p.Object.SaveTo}");
+                        p.Object.SaveTo = string.Empty;
+                    }
+                }
+
+                if (p.Object.SaveTo.Length > 0)
+                {
+                    _logger.Info($"Saving hits to '{p.Object.SaveTo}'");
+                    _logger.Info("");
+                }
             }
 
             var reg = new Regex(regPattern, RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
@@ -190,9 +229,14 @@ namespace bstrings
 
             AddHighlightingRules(words.ToList(), regPattern.Length>0);
 
+            StreamWriter sw = null;
+            if (p.Object.SaveTo.Length > 0)
+            {
+                sw = new StreamWriter(p.Object.SaveTo,false);
+            }
+
             foreach (var hit in set)
             {
-             
                 if (hit.Length == 0)
                 {
                     continue;
@@ -204,6 +248,7 @@ namespace bstrings
                     {
                         counter += 1;
                         _logger.Info(hit);
+                        sw?.WriteLine(hit);
                     }
                     else if (p.Object.LookForRegex.Length > 0)
                     {
@@ -213,13 +258,21 @@ namespace bstrings
                         }
                         counter += 1;
                         _logger.Info(hit);
+                        sw?.WriteLine(hit);
                     }
                 }
                 else
                 {
                     counter += 1;
                     _logger.Info(hit);
+                    sw?.WriteLine(hit);
                 }
+            }
+
+            if (sw != null)
+            {
+                sw.Flush();
+                sw.Close();
             }
 
             var suffix = counter == 1 ? "" : "s";
