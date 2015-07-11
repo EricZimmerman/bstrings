@@ -5,3 +5,6 @@ NEW: Show RegEx descriptions vs the pattern for -p
 NEW: Show the RegEx pattern being used in output
 NEW: SaveTo option now works (-o). Only the search hits will be saved to the file, not what is shown on the console.
 
+TODO
+
+Save regex patterns to file for reuse later (if not in included list)
