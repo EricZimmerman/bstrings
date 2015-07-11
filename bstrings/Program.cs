@@ -37,10 +37,10 @@ namespace bstrings
                 .WithDescription("File to save results to");
 
             p.Setup(arg => arg.GetAscii)
-                .As('a').SetDefault(true).WithDescription("If true, look for ASCII strings. Default is true");
+                .As('a').SetDefault(true).WithDescription("If set, look for ASCII strings. Default is true. Use -a false to disable");
 
             p.Setup(arg => arg.GetUnicode)
-                .As('u').SetDefault(true).WithDescription("If true, look for Unicode strings. Default is true");
+                .As('u').SetDefault(true).WithDescription("If set, look for Unicode strings. Default is true. Use -u false to disable");
 
             p.Setup(arg => arg.MinimumLength)
                 .As('m').SetDefault(3).WithDescription("Minimum string length. Default is 3");
