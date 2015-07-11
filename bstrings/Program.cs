@@ -170,6 +170,11 @@ namespace bstrings
                 regPattern = _regExPatterns[p.Object.LookForRegex];
             }
 
+            if (regPattern.Length > 0)
+            {
+                _logger.Info($"Searching via RegEx pattern: {regPattern}");
+            }
+
             var reg = new Regex(regPattern, RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
 
             //set up highlighting
