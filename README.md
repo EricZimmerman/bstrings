@@ -1,6 +1,9 @@
 # bstrings
 A better strings utility!
 
+NOTE: bstrings currently doesn't support files > 2GB. I will add support for large files soon.
+
+
     λ .\bstrings.exe
   
     bstrings version 0.8.0.0
