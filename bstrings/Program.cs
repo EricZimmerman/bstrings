@@ -18,6 +18,7 @@ namespace bstrings
         private static Stopwatch _sw;
 
         private static Dictionary<string, string> _regExPatterns = new Dictionary<string, string>(); 
+        private static Dictionary<string, string> _regExDesc = new Dictionary<string, string>(); 
 
         private static void Main(string[] args)
         {
@@ -88,10 +89,11 @@ namespace bstrings
 
             if (p.Object.GetPatterns)
             {
-                _logger.Info("Name: Value");
+                _logger.Info("Name \t\tDescription");
                 foreach (var regExPattern in _regExPatterns)
                 {
-                    _logger.Info($"{regExPattern.Key}:\t{regExPattern.Value}");
+                    var desc = _regExDesc[regExPattern.Key];
+                    _logger.Info($"{regExPattern.Key}\t{desc}");
                 }
 
                 _logger.Info("");
@@ -223,16 +225,31 @@ namespace bstrings
 
         private static void SetupPatterns()
         {
+            _regExDesc.Add("guid", "\tFinds GUIDs");
+            _regExDesc.Add("usPhone", "\tFinds US phone numbers");
+            _regExDesc.Add("unc", "\tFinds UNC paths");
+            _regExDesc.Add("mac", "\tFinds MAC addresses");
+            _regExDesc.Add("ssn", "\tFinds US Social Security Numbers");
+            _regExDesc.Add("cc", "\tFinds credit card numbers");
+            
+            _regExDesc.Add("ipv4", "\tFinds IP version 4 addresses");
+            _regExDesc.Add("ipv6", "\tFinds IP version 6 addresses");
+            _regExDesc.Add("email", "\tFinds email addresses");
+            _regExDesc.Add("zip", "\tFinds zip codes");
+            _regExDesc.Add("urlUser", "\tFinds usernames in URLs");
+            _regExDesc.Add("url3986", "\tFinds URLs according to RFC 3986");
+
+            _regExPatterns.Add("guid", @"\b[A-F0-9]{8}(?:-[A-F0-9]{4}){3}-[A-F0-9]{12}\b");
+            _regExPatterns.Add("usPhone", @"\(?\b[2-9][0-9]{2}\)?[-. ]?[2-9][0-9]{2}[-. ]?[0-9]{4}\b");
+            _regExPatterns.Add("unc", @"^\\\\(?<server>[a-z0-9 %._-]+)\\(?<share>[a-z0-9 $%._-]+)");
+            _regExPatterns.Add("mac", "\\b[0-9A-F]{2}([-:]?)(?:[0-9A-F]{2}\\1){4}[0-9A-F]{2}\\b");
+            _regExPatterns.Add("ssn", "\\b(?!000)(?!666)[0-8][0-9]{2}[- ](?!00)[0-9]{2}[- ](?!0000)[0-9]{4}\\b");
+            _regExPatterns.Add("cc", "^(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|6(?:011|5[0-9][0-9])[0-9]{12}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|(?:2131|1800|35\\d{3})\\d{11})$");
             _regExPatterns.Add("ipv4", @"\b(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\b");
             _regExPatterns.Add("ipv6", @"(?<![:.\w])(?:[A-F0-9]{1,4}:){7}[A-F0-9]{1,4}(?![:.\w])");
             _regExPatterns.Add("email", @"\A\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,6}\b\z");
             _regExPatterns.Add("zip", @"\A\b[0-9]{5}(?:-[0-9]{4})?\b\z");
-            _regExPatterns.Add("urlPort", @"^
-		[a-z][a-z0-9+\-.]*://               # Scheme
-		([a-z0-9\-._~%!$&'()*+,;=]+@)?      # User
-		(?<host>[a-z0-9\-._~%]+             # Named or IPv4 host
-		|\[[a-z0-9\-._~%!$&'()*+,;=:]+\])   # IPv6+ host
-		");
+            _regExPatterns.Add("urlUser", @"^[a-z0-9+\-.]+://(?<user>[a-z0-9\-._~%!$&'()*+,;=]+)@");
             _regExPatterns.Add("url3986", @"^
 		[a-z][a-z0-9+\-.]*://                       # Scheme
 		([a-z0-9\-._~%!$&'()*+,;=]+@)?              # User
