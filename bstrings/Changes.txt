@@ -1,11 +1,8 @@
-﻿0.9.0.0
+﻿0.9.5.0
 
-NEW: More RegEx patterns
-NEW: Show RegEx descriptions vs the pattern for -p
-NEW: Show the RegEx pattern being used in output
-NEW: Save to option now works (-o). Only the search hits will be saved to the file, not what is shown on the console.
-
-CHANGE: When using --ls, make the search case insensitive
+NEW: Added xml regex. Also matches HTML tags
+NEW: Large file support added
+NEW: Added -q switch. When present, header and search results will not be shown
 
 TODO
 
