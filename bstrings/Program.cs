@@ -368,7 +368,9 @@ namespace bstrings
             _regExDesc.Add("zip", "\tFinds zip codes");
             _regExDesc.Add("urlUser", "\tFinds usernames in URLs");
             _regExDesc.Add("url3986", "\tFinds URLs according to RFC 3986");
+            _regExDesc.Add("xml", "\tFinds URLs according to RFC 3986");
 
+            _regExPatterns.Add("xml", @"\A<([A-Z][A-Z0-9]*)\b[^>]*>(.*?)</\1>\z");
             _regExPatterns.Add("guid", @"\b[A-F0-9]{8}(?:-[A-F0-9]{4}){3}-[A-F0-9]{12}\b");
             _regExPatterns.Add("usPhone", @"\(?\b[2-9][0-9]{2}\)?[-. ]?[2-9][0-9]{2}[-. ]?[0-9]{4}\b");
             _regExPatterns.Add("unc", @"^\\\\(?<server>[a-z0-9 %._-]+)\\(?<share>[a-z0-9 $%._-]+)");
