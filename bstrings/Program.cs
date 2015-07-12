@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.MemoryMappedFiles;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -49,6 +50,9 @@ namespace bstrings
 
             p.Setup(arg => arg.MinimumLength)
                 .As('m').SetDefault(3).WithDescription("Minimum string length. Default is 3");
+
+            p.Setup(arg => arg.Quiet)
+    .As('q').SetDefault(false).WithDescription("Quiet mode (Do not show header or total number of hits)");
 
             p.Setup(arg => arg.MaximumLength)
                 .As('x').SetDefault(-1).WithDescription("Maximum string length. Default is unlimited");
@@ -123,15 +127,32 @@ namespace bstrings
                 return;
             }
 
-            _logger.Info(header);
-            _logger.Info("");
+            if (!p.Object.Quiet)
+            {
+                          _logger.Info(header);
+            _logger.Info("");  
+            }
+
 
             _sw = new Stopwatch();
             _sw.Start();
 
-            var rawBytes = File.ReadAllBytes(p.Object.File);
+            byte[] rawBytes = null;
 
-            var hits = new List<string>();
+            try
+            {
+                rawBytes = File.ReadAllBytes(p.Object.File);
+            }
+            catch (IOException ex)
+            {
+                _logger.Warn("Files larger than 2GB not currently supported. Exiting");
+                return;
+            }
+
+
+
+
+                var hits = new List<string>();
 
             var regPattern = p.Object.LookForRegex;
 
@@ -140,7 +161,7 @@ namespace bstrings
                 regPattern = _regExPatterns[p.Object.LookForRegex];
             }
 
-            if (regPattern.Length > 0)
+            if (regPattern.Length > 0 && !p.Object.Quiet)
             {
                 _logger.Info($"Searching via RegEx pattern: {regPattern}");
                 _logger.Info("");
@@ -174,15 +195,19 @@ namespace bstrings
                     }
                 }
 
-                if (p.Object.SaveTo.Length > 0)
+                if (p.Object.SaveTo.Length > 0 && !p.Object.Quiet)
                 {
                     _logger.Info($"Saving hits to '{p.Object.SaveTo}'");
                     _logger.Info("");
                 }
             }
 
-            _logger.Info("Searching...");
+            if (!p.Object.Quiet)
+            {
+                    _logger.Info("Searching...");
             _logger.Info("");
+            }
+        
 
             var minLength = 3;
             if (p.Object.MinimumLength > 0)
@@ -221,11 +246,7 @@ namespace bstrings
             var set = new HashSet<string>(hits);
 
             _sw.Stop();
-
-        
-
             
-
             var reg = new Regex(regPattern, RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
 
             //set up highlighting
@@ -287,10 +308,15 @@ namespace bstrings
                 sw.Close();
             }
 
-            var suffix = counter == 1 ? "" : "s";
+
+            if (!p.Object.Quiet)
+            {
+                 var suffix = counter == 1 ? "" : "s";
 
             _logger.Info("");
             _logger.Info($"Found {counter:N0} string{suffix} in {_sw.Elapsed.TotalSeconds:N3} seconds");
+            }
+           
         }
 
         private static void SetupPatterns()
@@ -435,6 +461,7 @@ namespace bstrings
         public bool ShowOffset { get; set; } = false;
         public bool SortLength { get; set; } = false;
         public bool SortAlpha { get; set; } = false;
+        public bool Quiet { get; set; } = false;
 
         public bool GetPatterns { get; set; } = false;
     }
