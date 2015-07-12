@@ -254,7 +254,7 @@ namespace bstrings
 
                         if (!p.Object.Quiet)
                         {
-                            _logger.Info($"Chunk {chunkIndex:N0} of {totalChunks:N0} finished. Total hits so far: {hits.Count:N0} Elapsed time: {_sw.Elapsed.TotalSeconds:N3} seconds");
+                            _logger.Info($"Chunk {chunkIndex:N0} of {totalChunks:N0} finished. Total strings so far: {hits.Count:N0} Elapsed time: {_sw.Elapsed.TotalSeconds:N3} seconds");
                         }
                     }
                 }
