@@ -133,26 +133,10 @@ namespace bstrings
             _logger.Info("");  
             }
 
-
             _sw = new Stopwatch();
             _sw.Start();
 
-            byte[] rawBytes = null;
-
-            try
-            {
-                rawBytes = File.ReadAllBytes(p.Object.File);
-            }
-            catch (IOException ex)
-            {
-                _logger.Warn("Files larger than 2GB not currently supported. Exiting");
-                return;
-            }
-
-
-
-
-                var hits = new List<string>();
+            var hits = new HashSet<string>();
 
             var regPattern = p.Object.LookForRegex;
 
@@ -184,7 +168,6 @@ namespace bstrings
                         p.Object.SaveTo = string.Empty;
 
                     }
-
                 }
                 else
                 {
@@ -202,13 +185,6 @@ namespace bstrings
                 }
             }
 
-            if (!p.Object.Quiet)
-            {
-                    _logger.Info("Searching...");
-            _logger.Info("");
-            }
-        
-
             var minLength = 3;
             if (p.Object.MinimumLength > 0)
             {
@@ -222,30 +198,89 @@ namespace bstrings
                 maxLength = p.Object.MaximumLength;
             }
 
-            if (p.Object.GetUnicode)
+            // for files > 2gb, we have to cut it up
+            var chunkSizeMb = 512;
+            var chunkSizeBytes = chunkSizeMb * 1024 * 1024;
+
+            long fileSizeBytes = new FileInfo(p.Object.File).Length;
+            long bytesRemaining = fileSizeBytes;
+            var offset = 0;
+
+            var chunkIndex = 1;
+            var totalChunks = (fileSizeBytes / chunkSizeBytes) + 1;
+            var hsuffix = totalChunks == 1 ? "" : "s";
+
+            if (!p.Object.Quiet)
             {
-                hits.AddRange(GetUnicodeHits(rawBytes, minLength, maxLength));
+                _logger.Info($"Searching {totalChunks:N0} chunk{hsuffix} ({chunkSizeMb} MB each)...");
+                _logger.Info("");
             }
 
-            if (p.Object.GetAscii)
+            using (var mmf = MemoryMappedFile.CreateFromFile(p.Object.File, FileMode.Open, "source"))
             {
-                hits.AddRange(GetAsciiHits(rawBytes, minLength, maxLength));
+                while (bytesRemaining > 0)
+                {
+                    if (bytesRemaining <= chunkSizeBytes)
+                    {
+                        chunkSizeBytes = (int)bytesRemaining;
+                    }
+
+                    using (var accessor = mmf.CreateViewStream(offset, chunkSizeBytes, MemoryMappedFileAccess.Read))
+                    {
+                        var chunk = new byte[chunkSizeBytes];
+
+                        accessor.Read(chunk, 0, chunkSizeBytes);
+
+                        offset += chunkSizeBytes;
+                        bytesRemaining -= chunkSizeBytes;
+
+                        if (p.Object.GetUnicode)
+                        {
+                            var uh = GetUnicodeHits(chunk, minLength, maxLength);
+                            foreach (var h in uh)
+                            {
+                                hits.Add(h);
+                            }
+                        }
+
+                        if (p.Object.GetAscii)
+                        {
+                            var ah = GetAsciiHits(chunk, minLength, maxLength);
+                            foreach (var h in ah)
+                            {
+                                hits.Add(h);
+                            }
+                        }
+
+                        if (!p.Object.Quiet)
+                        {
+                            _logger.Info($"Chunk {chunkIndex:N0} of {totalChunks:N0} finished. Total hits so far: {hits.Count:N0} Elapsed time: {_sw.Elapsed.TotalSeconds:N3} seconds");
+                        }
+                    }
+                }
+            }
+            _sw.Stop();
+
+            if (!p.Object.Quiet)
+            {
+                _logger.Info("");
             }
 
             if (p.Object.SortAlpha)
             {
-                hits.Sort();
+                var tempList = hits.ToList();
+                tempList.Sort();
+                hits = new HashSet<string>(tempList);
             }
             else if (p.Object.SortLength)
             {
-                hits = SortByLength(hits).ToList();
+                var tempList = SortByLength(hits.ToList()).ToList();
+                hits = new HashSet<string>(tempList);
             }
 
             var counter = 0;
 
-            var set = new HashSet<string>(hits);
-
-            _sw.Stop();
+           
             
             var reg = new Regex(regPattern, RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
 
@@ -268,7 +303,7 @@ namespace bstrings
                 sw = new StreamWriter(p.Object.SaveTo,false);
             }
 
-            foreach (var hit in set)
+            foreach (var hit in hits)
             {
                 if (hit.Length == 0)
                 {
@@ -308,13 +343,12 @@ namespace bstrings
                 sw.Close();
             }
 
-
             if (!p.Object.Quiet)
             {
                  var suffix = counter == 1 ? "" : "s";
 
-            _logger.Info("");
-            _logger.Info($"Found {counter:N0} string{suffix} in {_sw.Elapsed.TotalSeconds:N3} seconds");
+                _logger.Info("");
+                _logger.Info($"Found {counter:N0} string{suffix} in {_sw.Elapsed.TotalSeconds:N3} seconds");
             }
            
         }
