@@ -18,9 +18,8 @@ namespace bstrings
     {
         private static Logger _logger;
         private static Stopwatch _sw;
-
-        private static Dictionary<string, string> _regExPatterns = new Dictionary<string, string>(); 
-        private static Dictionary<string, string> _regExDesc = new Dictionary<string, string>(); 
+        private static readonly Dictionary<string, string> _regExPatterns = new Dictionary<string, string>();
+        private static readonly Dictionary<string, string> _regExDesc = new Dictionary<string, string>();
 
         private static void Main(string[] args)
         {
@@ -43,22 +42,26 @@ namespace bstrings
                 .WithDescription("File to save results to");
 
             p.Setup(arg => arg.GetAscii)
-                .As('a').SetDefault(true).WithDescription("If set, look for ASCII strings. Default is true. Use -a false to disable");
+                .As('a')
+                .SetDefault(true)
+                .WithDescription("If set, look for ASCII strings. Default is true. Use -a false to disable");
 
             p.Setup(arg => arg.GetUnicode)
-                .As('u').SetDefault(true).WithDescription("If set, look for Unicode strings. Default is true. Use -u false to disable");
+                .As('u')
+                .SetDefault(true)
+                .WithDescription("If set, look for Unicode strings. Default is true. Use -u false to disable");
 
             p.Setup(arg => arg.MinimumLength)
                 .As('m').SetDefault(3).WithDescription("Minimum string length. Default is 3");
 
             p.Setup(arg => arg.Quiet)
-    .As('q').SetDefault(false).WithDescription("Quiet mode (Do not show header or total number of hits)");
+                .As('q').SetDefault(false).WithDescription("Quiet mode (Do not show header or total number of hits)");
 
             p.Setup(arg => arg.MaximumLength)
                 .As('x').SetDefault(-1).WithDescription("Maximum string length. Default is unlimited");
 
             p.Setup(arg => arg.GetPatterns)
-    .As('p').SetDefault(false).WithDescription("Display list of built in regular expressions");
+                .As('p').SetDefault(false).WithDescription("Display list of built in regular expressions");
 
             p.Setup(arg => arg.LookForString)
                 .As("ls")
@@ -129,8 +132,8 @@ namespace bstrings
 
             if (!p.Object.Quiet)
             {
-                          _logger.Info(header);
-            _logger.Info("");  
+                _logger.Info(header);
+                _logger.Info("");
             }
 
             _sw = new Stopwatch();
@@ -166,7 +169,6 @@ namespace bstrings
                         _logger.Warn($"Invalid path: '{p.Object.SaveTo}'. Results will not be saved to a file.");
                         _logger.Info("");
                         p.Object.SaveTo = string.Empty;
-
                     }
                 }
                 else
@@ -200,14 +202,14 @@ namespace bstrings
 
             // for files > 2gb, we have to cut it up
             var chunkSizeMb = 512;
-            var chunkSizeBytes = chunkSizeMb * 1024 * 1024;
+            var chunkSizeBytes = chunkSizeMb*1024*1024;
 
-            long fileSizeBytes = new FileInfo(p.Object.File).Length;
-            long bytesRemaining = fileSizeBytes;
+            var fileSizeBytes = new FileInfo(p.Object.File).Length;
+            var bytesRemaining = fileSizeBytes;
             var offset = 0;
 
             var chunkIndex = 1;
-            var totalChunks = (fileSizeBytes / chunkSizeBytes) + 1;
+            var totalChunks = (fileSizeBytes/chunkSizeBytes) + 1;
             var hsuffix = totalChunks == 1 ? "" : "s";
 
             if (!p.Object.Quiet)
@@ -222,7 +224,7 @@ namespace bstrings
                 {
                     if (bytesRemaining <= chunkSizeBytes)
                     {
-                        chunkSizeBytes = (int)bytesRemaining;
+                        chunkSizeBytes = (int) bytesRemaining;
                     }
 
                     using (var accessor = mmf.CreateViewStream(offset, chunkSizeBytes, MemoryMappedFileAccess.Read))
@@ -254,7 +256,8 @@ namespace bstrings
 
                         if (!p.Object.Quiet)
                         {
-                            _logger.Info($"Chunk {chunkIndex:N0} of {totalChunks:N0} finished. Total strings so far: {hits.Count:N0} Elapsed time: {_sw.Elapsed.TotalSeconds:N3} seconds");
+                            _logger.Info(
+                                $"Chunk {chunkIndex:N0} of {totalChunks:N0} finished. Total strings so far: {hits.Count:N0} Elapsed time: {_sw.Elapsed.TotalSeconds:N3} seconds");
                         }
                     }
                 }
@@ -280,9 +283,9 @@ namespace bstrings
 
             var counter = 0;
 
-           
-            
-            var reg = new Regex(regPattern, RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
+
+            var reg = new Regex(regPattern,
+                RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
 
             //set up highlighting
             var words = new HashSet<string>();
@@ -295,12 +298,12 @@ namespace bstrings
                 words.Add(regPattern);
             }
 
-            AddHighlightingRules(words.ToList(), regPattern.Length>0);
+            AddHighlightingRules(words.ToList(), regPattern.Length > 0);
 
             StreamWriter sw = null;
             if (p.Object.SaveTo.Length > 0)
             {
-                sw = new StreamWriter(p.Object.SaveTo,false);
+                sw = new StreamWriter(p.Object.SaveTo, false);
             }
 
             foreach (var hit in hits)
@@ -312,7 +315,8 @@ namespace bstrings
 
                 if (p.Object.LookForString.Length > 0 || p.Object.LookForRegex.Length > 0)
                 {
-                    if (p.Object.LookForString.Length > 0 && hit.IndexOf(p.Object.LookForString, StringComparison.InvariantCultureIgnoreCase) >= 0)
+                    if (p.Object.LookForString.Length > 0 &&
+                        hit.IndexOf(p.Object.LookForString, StringComparison.InvariantCultureIgnoreCase) >= 0)
                     {
                         counter += 1;
                         _logger.Info(hit);
@@ -345,12 +349,11 @@ namespace bstrings
 
             if (!p.Object.Quiet)
             {
-                 var suffix = counter == 1 ? "" : "s";
+                var suffix = counter == 1 ? "" : "s";
 
                 _logger.Info("");
                 _logger.Info($"Found {counter:N0} string{suffix} in {_sw.Elapsed.TotalSeconds:N3} seconds");
             }
-           
         }
 
         private static void SetupPatterns()
@@ -361,14 +364,14 @@ namespace bstrings
             _regExDesc.Add("mac", "\tFinds MAC addresses");
             _regExDesc.Add("ssn", "\tFinds US Social Security Numbers");
             _regExDesc.Add("cc", "\tFinds credit card numbers");
-            
+
             _regExDesc.Add("ipv4", "\tFinds IP version 4 addresses");
             _regExDesc.Add("ipv6", "\tFinds IP version 6 addresses");
             _regExDesc.Add("email", "\tFinds email addresses");
             _regExDesc.Add("zip", "\tFinds zip codes");
             _regExDesc.Add("urlUser", "\tFinds usernames in URLs");
             _regExDesc.Add("url3986", "\tFinds URLs according to RFC 3986");
-            _regExDesc.Add("xml", "\tFinds URLs according to RFC 3986");
+            _regExDesc.Add("xml", "\tFinds XML/HTML tags");
 
             _regExPatterns.Add("xml", @"\A<([A-Z][A-Z0-9]*)\b[^>]*>(.*?)</\1>\z");
             _regExPatterns.Add("guid", @"\b[A-F0-9]{8}(?:-[A-F0-9]{4}){3}-[A-F0-9]{12}\b");
@@ -376,8 +379,10 @@ namespace bstrings
             _regExPatterns.Add("unc", @"^\\\\(?<server>[a-z0-9 %._-]+)\\(?<share>[a-z0-9 $%._-]+)");
             _regExPatterns.Add("mac", "\\b[0-9A-F]{2}([-:]?)(?:[0-9A-F]{2}\\1){4}[0-9A-F]{2}\\b");
             _regExPatterns.Add("ssn", "\\b(?!000)(?!666)[0-8][0-9]{2}[- ](?!00)[0-9]{2}[- ](?!0000)[0-9]{4}\\b");
-            _regExPatterns.Add("cc", "^(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|6(?:011|5[0-9][0-9])[0-9]{12}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|(?:2131|1800|35\\d{3})\\d{11})$");
-            _regExPatterns.Add("ipv4", @"\b(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\b");
+            _regExPatterns.Add("cc",
+                "^(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|6(?:011|5[0-9][0-9])[0-9]{12}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|(?:2131|1800|35\\d{3})\\d{11})$");
+            _regExPatterns.Add("ipv4",
+                @"\b(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\b");
             _regExPatterns.Add("ipv6", @"(?<![:.\w])(?:[A-F0-9]{1,4}:){7}[A-F0-9]{1,4}(?![:.\w])");
             _regExPatterns.Add("email", @"\A\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,6}\b\z");
             _regExPatterns.Add("zip", @"\A\b[0-9]{5}(?:-[0-9]{4})?\b\z");
@@ -393,12 +398,11 @@ namespace bstrings
 		(\?[a-z0-9\-._~%!$&'()*+,;=:@/?]*)?         # Query
 		(\#[a-z0-9\-._~%!$&'()*+,;=:@/?]*)?         # Fragment
 		$");
-
         }
 
         private static void AddHighlightingRules(List<string> words, bool isRegEx = false)
         {
-            var target = (ColoredConsoleTarget)LogManager.Configuration.FindTargetByName("console");
+            var target = (ColoredConsoleTarget) LogManager.Configuration.FindTargetByName("console");
             var rule = target.WordHighlightingRules.FirstOrDefault();
 
             var bgColor = ConsoleOutputColor.Green;
@@ -498,7 +502,6 @@ namespace bstrings
         public bool SortLength { get; set; } = false;
         public bool SortAlpha { get; set; } = false;
         public bool Quiet { get; set; } = false;
-
         public bool GetPatterns { get; set; } = false;
     }
 }
