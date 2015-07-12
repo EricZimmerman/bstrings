@@ -200,7 +200,6 @@ namespace bstrings
                 maxLength = p.Object.MaximumLength;
             }
 
-            // for files > 2gb, we have to cut it up
             var chunkSizeMb = 512;
             var chunkSizeBytes = chunkSizeMb*1024*1024;
 
