@@ -55,7 +55,7 @@ namespace bstrings
                 .As('m').SetDefault(3).WithDescription("Minimum string length. Default is 3");
 
             p.Setup(arg => arg.BlockSizeMB)
-              .As('b').SetDefault(512).WithDescription("Chunk size in MB. Default is 512");
+              .As('b').SetDefault(512).WithDescription("Chunk size in MB. Valid range is 1 to 1024. Default is 512");
 
             p.Setup(arg => arg.Quiet)
                 .As('q').SetDefault(false).WithDescription("Quiet mode (Do not show header or total number of hits)");
@@ -203,7 +203,7 @@ namespace bstrings
                 maxLength = p.Object.MaximumLength;
             }
 
-            var chunkSizeMb = p.Object.BlockSizeMB;
+            var chunkSizeMb = p.Object.BlockSizeMB < 1 || p.Object.BlockSizeMB > 1024 ? 512: p.Object.BlockSizeMB;
             var chunkSizeBytes = chunkSizeMb*1024*1024;
 
             var fileSizeBytes = new FileInfo(p.Object.File).Length;
