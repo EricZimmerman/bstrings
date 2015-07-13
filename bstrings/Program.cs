@@ -54,6 +54,9 @@ namespace bstrings
             p.Setup(arg => arg.MinimumLength)
                 .As('m').SetDefault(3).WithDescription("Minimum string length. Default is 3");
 
+            p.Setup(arg => arg.BlockSizeMB)
+              .As('b').SetDefault(512).WithDescription("Chunk size in MB. Default is 512");
+
             p.Setup(arg => arg.Quiet)
                 .As('q').SetDefault(false).WithDescription("Quiet mode (Do not show header or total number of hits)");
 
@@ -200,12 +203,12 @@ namespace bstrings
                 maxLength = p.Object.MaximumLength;
             }
 
-            var chunkSizeMb = 512;
+            var chunkSizeMb = p.Object.BlockSizeMB;
             var chunkSizeBytes = chunkSizeMb*1024*1024;
 
             var fileSizeBytes = new FileInfo(p.Object.File).Length;
             var bytesRemaining = fileSizeBytes;
-            var offset = 0;
+            long offset = 0;
 
             var chunkIndex = 1;
             var totalChunks = (fileSizeBytes/chunkSizeBytes) + 1;
@@ -213,7 +216,9 @@ namespace bstrings
 
             if (!p.Object.Quiet)
             {
-                _logger.Info($"Searching {totalChunks:N0} chunk{hsuffix} ({chunkSizeMb} MB each)...");
+                _logger.Info($"Command line: {string.Join(" ",args)}");
+                _logger.Info("");
+                _logger.Info($"Searching {totalChunks:N0} chunk{hsuffix} ({chunkSizeMb} MB each) across {GetSizeReadable(fileSizeBytes)}");
                 _logger.Info("");
             }
 
@@ -256,9 +261,10 @@ namespace bstrings
                         if (!p.Object.Quiet)
                         {
                             _logger.Info(
-                                $"Chunk {chunkIndex:N0} of {totalChunks:N0} finished. Total strings so far: {hits.Count:N0} Elapsed time: {_sw.Elapsed.TotalSeconds:N3} seconds");
+                                $"Chunk {chunkIndex:N0} of {totalChunks:N0} finished. Total strings so far: {hits.Count:N0} Elapsed time: {_sw.Elapsed.TotalSeconds:N3} seconds. Average strings/sec: {(hits.Count/_sw.Elapsed.TotalSeconds):N0}");
                         }
                     }
+                    chunkIndex += 1;
                 }
             }
             _sw.Stop();
@@ -351,8 +357,52 @@ namespace bstrings
                 var suffix = counter == 1 ? "" : "s";
 
                 _logger.Info("");
-                _logger.Info($"Found {counter:N0} string{suffix} in {_sw.Elapsed.TotalSeconds:N3} seconds");
+                _logger.Info($"Found {counter:N0} string{suffix} in {_sw.Elapsed.TotalSeconds:N3} seconds. Average strings/sec: {(hits.Count / _sw.Elapsed.TotalSeconds):N0}");
             }
+        }
+
+        private static string GetSizeReadable(long i)
+        {
+            string sign = (i < 0 ? "-" : "");
+            double readable = (i < 0 ? -i : i);
+            string suffix;
+            if (i >= 0x1000000000000000) // Exabyte
+            {
+                suffix = "EB";
+                readable = (double)(i >> 50);
+            }
+            else if (i >= 0x4000000000000) // Petabyte
+            {
+                suffix = "PB";
+                readable = (double)(i >> 40);
+            }
+            else if (i >= 0x10000000000) // Terabyte
+            {
+                suffix = "TB";
+                readable = (double)(i >> 30);
+            }
+            else if (i >= 0x40000000) // Gigabyte
+            {
+                suffix = "GB";
+                readable = (double)(i >> 20);
+            }
+            else if (i >= 0x100000) // Megabyte
+            {
+                suffix = "MB";
+                readable = (double)(i >> 10);
+            }
+            else if (i >= 0x400) // Kilobyte
+            {
+                suffix = "KB";
+                readable = (double)i;
+            }
+            else
+            {
+                return i.ToString(sign + "0 B"); // Byte
+            }
+            readable = readable / 1024;
+
+            return sign + readable.ToString("0.### ") + suffix;
         }
 
         private static void SetupPatterns()
@@ -497,6 +547,7 @@ namespace bstrings
         public string LookForRegex { get; set; } = string.Empty;
         public int MinimumLength { get; set; } = 3;
         public int MaximumLength { get; set; } = -1;
+        public int BlockSizeMB { get; set; } = 512;
         public bool ShowOffset { get; set; } = false;
         public bool SortLength { get; set; } = false;
         public bool SortAlpha { get; set; } = false;

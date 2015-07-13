@@ -2,7 +2,10 @@
 
 NEW: Added xml regex. Also matches HTML tags
 NEW: Large file support added
-NEW: Added -q switch. When present, header and search results will not be shown
+NEW: Added -q switch. When present, only strings will be shown (header and summary are suppressed)
+NEW: Add command line used to header output
+NEW: Added -b switch. This lets you choose the chunk size for large files. Default is 512 MB
+NEW: Add total time elapsed and averages to search summary
 
 TODO
 
