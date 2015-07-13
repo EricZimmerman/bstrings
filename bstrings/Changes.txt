@@ -4,4 +4,6 @@
 
 TODO
 
+Multithreaded. Do total chunks/2 for thread count?
+
 Save regex patterns to file for reuse later (if not in included list)
