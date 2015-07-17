@@ -124,6 +124,7 @@ namespace bstrings
             {
                 _logger.Error("");
                 _logger.Error(result.ErrorText);
+
                 p.HelpOption.ShowHelp(p.Options);
 
                 return;
