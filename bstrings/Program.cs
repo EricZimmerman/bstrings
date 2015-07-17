@@ -122,6 +122,8 @@ namespace bstrings
 
             if (result.HasErrors)
             {
+                _logger.Error("");
+                _logger.Error(result.ErrorText);
                 p.HelpOption.ShowHelp(p.Options);
 
                 return;
@@ -156,6 +158,22 @@ namespace bstrings
                 _logger.Info($"Searching via RegEx pattern: {regPattern}");
                 _logger.Info("");
             }
+
+            Regex reg = null;
+
+            try
+            {
+                reg = new Regex(regPattern,
+                RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
+
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"Error setting up regular expression: {ex.Message}");
+                return;
+            }
+
+
 
             if (p.Object.SaveTo.Length > 0)
             {
@@ -289,9 +307,8 @@ namespace bstrings
             var counter = 0;
 
 
-            var reg = new Regex(regPattern,
-                RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
-
+          
+               
             //set up highlighting
             var words = new HashSet<string>();
             if (p.Object.LookForString.Length > 0)
