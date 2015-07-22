@@ -1,5 +1,9 @@
 ﻿0.9.6.0
 
+NEW: Detect .net 4.6 on start up. Exit if not found.
+
+CHANGE: Display any error messsages on cmdline vs just showing help
+CHANGE: check for errors in regex pattern before opening file, catch bad regex patterns up front
 
 
 TODO
