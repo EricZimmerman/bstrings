@@ -362,7 +362,7 @@ namespace bstrings
 			}
 
             SQLiteConnection dbCon = new SQLiteConnection();
-            SQLiteCommand dbCmd;
+            SQLiteCommand dbCmd = new SQLiteCommand();
             if (p.Object.SqliteOutput != string.Empty)
             {
                 SQLiteConnection.CreateFile(p.Object.SqliteOutput);
@@ -374,7 +374,11 @@ namespace bstrings
                 dbCmd.ExecuteNonQuery();
                 dbCmd.CommandText = "create index string_idx on strings (string)";
                 dbCmd.ExecuteNonQuery();
+                dbCmd.CommandText = "begin";
+                dbCmd.ExecuteNonQuery();
+                _logger.Info("Writing hits to SQLite... (Cancel during this will lose all strings)");
             }
+
 
 			foreach (var hit in hits)
 			{
@@ -430,6 +434,18 @@ namespace bstrings
                         sw?.WriteLine(hit);
                     }
                 }
+
+                if (p.Object.SqliteOutput != string.Empty)
+                {
+                    DrawProgressBar(counter, hits.Count, Console.WindowWidth -10, '█');
+                }
+            }
+            Console.CursorVisible = true;
+
+            if (p.Object.SqliteOutput != string.Empty)
+            {
+                dbCmd.CommandText = "commit";
+                dbCmd.ExecuteNonQuery();
             }
 
 			if (sw != null)
@@ -446,7 +462,9 @@ namespace bstrings
 				_logger.Info(
 					$"Found {counter:N0} string{suffix} in {_sw.Elapsed.TotalSeconds:N3} seconds. Average strings/sec: {(hits.Count/_sw.Elapsed.TotalSeconds):N0}");
 			}
-		}
+
+
+        }
 
         private static void DbInsertString (string hit, SQLiteConnection dbCon)
         {
@@ -456,8 +474,29 @@ namespace bstrings
             data.Value = hit;
             dbCmd.ExecuteNonQuery();
         }
+        private static void DrawProgressBar(int complete, int maxVal, int barSize, char progressCharacter)
+        {
+            Console.CursorVisible = false;
+            int left = Console.CursorLeft;
+            decimal perc = (decimal)complete / (decimal)maxVal;
+            int chars = (int)Math.Floor(perc / ((decimal)1 / (decimal)barSize));
+            string p1 = String.Empty, p2 = String.Empty;
 
-		private static string GetSizeReadable(long i)
+            for (int i = 0; i < chars; i++) p1 += progressCharacter;
+            for (int i = 0; i < barSize - chars; i++) p2 += progressCharacter;
+
+            Console.Write('\r');
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.Write(p1);
+            Console.ForegroundColor = ConsoleColor.DarkGreen;
+            Console.Write(p2);
+
+            Console.ResetColor();
+            Console.Write(" {0}%", (perc * 100).ToString("N2"));
+            Console.CursorLeft = left;
+        }
+
+        private static string GetSizeReadable(long i)
 		{
 			var sign = (i < 0 ? "-" : "");
 			double readable = (i < 0 ? -i : i);
