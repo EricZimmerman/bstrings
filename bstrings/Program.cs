@@ -389,11 +389,14 @@ namespace bstrings
 						hit.IndexOf(p.Object.LookForString, StringComparison.InvariantCultureIgnoreCase) >= 0)
 					{
 						counter += 1;
-						_logger.Info(hit);
-						sw?.WriteLine(hit);
                         if (p.Object.SqliteOutput != string.Empty)
                         {
                             DbInsertString(hit, dbCon);
+                        }
+                        else
+                        {
+                            _logger.Info(hit);
+                            sw?.WriteLine(hit);
                         }
                     }
 					else if (p.Object.LookForRegex.Length > 0)
@@ -403,25 +406,31 @@ namespace bstrings
 							continue;
 						}
 						counter += 1;
-						_logger.Info(hit);
-						sw?.WriteLine(hit);
                         if (p.Object.SqliteOutput != string.Empty)
                         {
                             DbInsertString(hit, dbCon);
                         }
+                        else
+                        {
+                            _logger.Info(hit);
+                            sw?.WriteLine(hit);
+                        }
                     }
-				}
+                }
 				else
 				{
 					counter += 1;
-					_logger.Info(hit);
-					sw?.WriteLine(hit);
                     if (p.Object.SqliteOutput != string.Empty)
                     {
                         DbInsertString(hit, dbCon);
                     }
+                    else
+                    {
+                        _logger.Info(hit);
+                        sw?.WriteLine(hit);
+                    }
                 }
-			}
+            }
 
 			if (sw != null)
 			{
