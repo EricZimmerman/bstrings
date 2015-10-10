@@ -12,6 +12,7 @@ using Microsoft.Win32;
 using NLog;
 using NLog.Config;
 using NLog.Targets;
+using System.Data.SQLite;
 
 namespace bstrings
 {
@@ -62,6 +63,10 @@ namespace bstrings
 			p.Setup(arg => arg.SaveTo)
 				.As('o')
 				.WithDescription("File to save results to");
+
+            p.Setup(arg => arg.SqliteOutput)
+                .As("sql")
+                .WithDescription("Set a file path to output string into SQLite format");
 
 			p.Setup(arg => arg.GetAscii)
 				.As('a')
@@ -356,6 +361,21 @@ namespace bstrings
 				sw = new StreamWriter(p.Object.SaveTo, false);
 			}
 
+            SQLiteConnection dbCon = new SQLiteConnection();
+            SQLiteCommand dbCmd;
+            if (p.Object.SqliteOutput != string.Empty)
+            {
+                SQLiteConnection.CreateFile(p.Object.SqliteOutput);
+                //SQLiteConnection dbCon;
+                dbCon = new SQLiteConnection("Data Source='" + p.Object.SqliteOutput + "';Version=3;");
+                dbCon.Open();
+                
+                dbCmd = new SQLiteCommand("create table strings (string TEXT)", dbCon);
+                dbCmd.ExecuteNonQuery();
+                dbCmd.CommandText = "create index string_idx on strings (string)";
+                dbCmd.ExecuteNonQuery();
+            }
+
 			foreach (var hit in hits)
 			{
 				if (hit.Length == 0)
@@ -371,7 +391,11 @@ namespace bstrings
 						counter += 1;
 						_logger.Info(hit);
 						sw?.WriteLine(hit);
-					}
+                        if (p.Object.SqliteOutput != string.Empty)
+                        {
+                            DbInsertString(hit, dbCon);
+                        }
+                    }
 					else if (p.Object.LookForRegex.Length > 0)
 					{
 						if (!reg.IsMatch(hit))
@@ -381,14 +405,22 @@ namespace bstrings
 						counter += 1;
 						_logger.Info(hit);
 						sw?.WriteLine(hit);
-					}
+                        if (p.Object.SqliteOutput != string.Empty)
+                        {
+                            DbInsertString(hit, dbCon);
+                        }
+                    }
 				}
 				else
 				{
 					counter += 1;
 					_logger.Info(hit);
 					sw?.WriteLine(hit);
-				}
+                    if (p.Object.SqliteOutput != string.Empty)
+                    {
+                        DbInsertString(hit, dbCon);
+                    }
+                }
 			}
 
 			if (sw != null)
@@ -406,6 +438,15 @@ namespace bstrings
 					$"Found {counter:N0} string{suffix} in {_sw.Elapsed.TotalSeconds:N3} seconds. Average strings/sec: {(hits.Count/_sw.Elapsed.TotalSeconds):N0}");
 			}
 		}
+
+        private static void DbInsertString (string hit, SQLiteConnection dbCon)
+        {
+            SQLiteCommand dbCmd = new SQLiteCommand("INSERT INTO strings (string) VALUES (?)", dbCon);
+            SQLiteParameter data = new SQLiteParameter();
+            dbCmd.Parameters.Add(data);
+            data.Value = hit;
+            dbCmd.ExecuteNonQuery();
+        }
 
 		private static string GetSizeReadable(long i)
 		{
@@ -599,5 +640,7 @@ namespace bstrings
 		public bool SortAlpha { get; set; } = false;
 		public bool Quiet { get; set; } = false;
 		public bool GetPatterns { get; set; } = false;
+
+        public string SqliteOutput { get; set; } = string.Empty;
 	}
 }
