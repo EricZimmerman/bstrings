@@ -12,6 +12,7 @@ using Microsoft.Win32;
 using NLog;
 using NLog.Config;
 using NLog.Targets;
+using System.Data.SQLite;
 
 namespace bstrings
 {
@@ -62,6 +63,10 @@ namespace bstrings
 			p.Setup(arg => arg.SaveTo)
 				.As('o')
 				.WithDescription("File to save results to");
+
+            p.Setup(arg => arg.SqliteOutput)
+                .As("sql")
+                .WithDescription("Set a file path to output string into SQLite format");
 
 			p.Setup(arg => arg.GetAscii)
 				.As('a')
@@ -356,6 +361,56 @@ namespace bstrings
 				sw = new StreamWriter(p.Object.SaveTo, false);
 			}
 
+            SQLiteConnection dbCon = new SQLiteConnection();
+            SQLiteCommand dbCmd = new SQLiteCommand();
+            if (p.Object.SqliteOutput != string.Empty)
+            {
+                SQLiteConnection.CreateFile(p.Object.SqliteOutput);
+                //SQLiteConnection dbCon;
+                dbCon = new SQLiteConnection("Data Source='" + p.Object.SqliteOutput + "';Version=3;");
+                dbCon.Open();
+                string createTable = "create table strings (string TEXT, length INTEGER, ascii_only INTEGER default 0 ";
+                /*string createCounts = "CREATE VIEW [counts] AS select " +
+                                        "(select count(*) from strings) as total," +
+                                        "(select count(*) from strings where ascii_only = 1) as ascii_only," +
+                                        "(select count(*) from strings where ascii_only = 0) as non_ascii";*/
+                string createCounts = "CREATE VIEW [counts] AS select '1_total' as name, (select count(*) from strings) as total " +
+                                        "union select '2_ascii_only', (select count(*) from strings where ascii_only = 1) " +
+                                        "union select '3_non_ascii', (select count(*) from strings where ascii_only = 0) ";
+                string createOther = "create view [view_other] as select * from strings where string not in (";
+                foreach (string key in _regExPatterns.Keys)
+                {
+                    createTable += ", " + key + " INTEGER default 0 ";
+                    //createCounts += ",(select count(*) from strings where " + key + " = 1) as " + key;
+                    createCounts += "union select '" + key + "', (select count(*) from strings where " + key + " = 1) ";
+                    createOther += "select string from view_" + key + " union ";
+                }
+                createTable += ")";
+                createOther = createOther.Remove(createOther.Length - 6) + ")";
+                //_logger.Info(createOther);
+                dbCmd = new SQLiteCommand(createTable, dbCon);
+                dbCmd.ExecuteNonQuery();
+                dbCmd.CommandText = "create index string_idx on strings (string)";
+                dbCmd.ExecuteNonQuery();
+                dbCmd.CommandText = createCounts;
+                dbCmd.ExecuteNonQuery();
+                dbCmd.CommandText = "create view [view_ascii] as select * from strings where ascii_only = 1";
+                dbCmd.ExecuteNonQuery();
+                dbCmd.CommandText = "create view [view_non_ascii] as select * from strings where ascii_only = 0";
+                dbCmd.ExecuteNonQuery();
+                foreach (string key in _regExPatterns.Keys)
+                {
+                    dbCmd.CommandText = "create view [view_" + key + "] as select * from strings where " + key + " = 1";
+                    dbCmd.ExecuteNonQuery();
+                }
+                dbCmd.CommandText = createOther;
+                dbCmd.ExecuteNonQuery();
+                dbCmd.CommandText = "begin";
+                dbCmd.ExecuteNonQuery();
+                _logger.Info("Writing hits to SQLite... (Cancel during this will lose all strings)");
+            }
+
+
 			foreach (var hit in hits)
 			{
 				if (hit.Length == 0)
@@ -369,9 +424,16 @@ namespace bstrings
 						hit.IndexOf(p.Object.LookForString, StringComparison.InvariantCultureIgnoreCase) >= 0)
 					{
 						counter += 1;
-						_logger.Info(hit);
-						sw?.WriteLine(hit);
-					}
+                        if (p.Object.SqliteOutput != string.Empty)
+                        {
+                            DbInsertString(hit, dbCon);
+                        }
+                        else
+                        {
+                            _logger.Info(hit);
+                            sw?.WriteLine(hit);
+                        }
+                    }
 					else if (p.Object.LookForRegex.Length > 0)
 					{
 						if (!reg.IsMatch(hit))
@@ -379,17 +441,43 @@ namespace bstrings
 							continue;
 						}
 						counter += 1;
-						_logger.Info(hit);
-						sw?.WriteLine(hit);
-					}
-				}
+                        if (p.Object.SqliteOutput != string.Empty)
+                        {
+                            DbInsertString(hit, dbCon);
+                        }
+                        else
+                        {
+                            _logger.Info(hit);
+                            sw?.WriteLine(hit);
+                        }
+                    }
+                }
 				else
 				{
 					counter += 1;
-					_logger.Info(hit);
-					sw?.WriteLine(hit);
-				}
-			}
+                    if (p.Object.SqliteOutput != string.Empty)
+                    {
+                        DbInsertString(hit, dbCon);
+                    }
+                    else
+                    {
+                        _logger.Info(hit);
+                        sw?.WriteLine(hit);
+                    }
+                }
+
+                if (p.Object.SqliteOutput != string.Empty)
+                {
+                    DrawProgressBar(counter, hits.Count, Console.WindowWidth -10, '█');
+                }
+            }
+            Console.CursorVisible = true;
+
+            if (p.Object.SqliteOutput != string.Empty)
+            {
+                dbCmd.CommandText = "commit";
+                dbCmd.ExecuteNonQuery();
+            }
 
 			if (sw != null)
 			{
@@ -405,9 +493,62 @@ namespace bstrings
 				_logger.Info(
 					$"Found {counter:N0} string{suffix} in {_sw.Elapsed.TotalSeconds:N3} seconds. Average strings/sec: {(hits.Count/_sw.Elapsed.TotalSeconds):N0}");
 			}
-		}
 
-		private static string GetSizeReadable(long i)
+
+        }
+
+        private static void DbInsertString (string hit, SQLiteConnection dbCon)
+        {
+            string insertText1 = "INSERT INTO strings (string, length, ascii_only";
+            string insertText2 = ") VALUES (?," + hit.Length + "," + (IsAscii(hit)?1:0);
+            foreach (KeyValuePair<string, string> re in _regExPatterns)
+            {
+                Regex reg = new Regex(re.Value, RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
+                if (reg.IsMatch(hit))
+                {
+                    insertText1 += "," + re.Key;
+                    insertText2 += ",1";
+                }
+
+            }
+            insertText2 += ")";
+            //_logger.Info(insertText1 + insertText2);
+            SQLiteCommand dbCmd = new SQLiteCommand(insertText1 + insertText2, dbCon);
+            SQLiteParameter data = new SQLiteParameter();
+            dbCmd.Parameters.Add(data);
+            data.Value = hit;
+            dbCmd.ExecuteNonQuery();
+        }
+
+        private static bool IsAscii(string value)
+        {
+            // ASCII encoding replaces non-ascii with question marks, so we use UTF8 to see if multi-byte sequences are there
+            return Encoding.UTF8.GetByteCount(value) == value.Length;
+        }
+
+        private static void DrawProgressBar(int complete, int maxVal, int barSize, char progressCharacter)
+        {
+            Console.CursorVisible = false;
+            int left = Console.CursorLeft;
+            decimal perc = (decimal)complete / (decimal)maxVal;
+            int chars = (int)Math.Floor(perc / ((decimal)1 / (decimal)barSize));
+            string p1 = String.Empty, p2 = String.Empty;
+
+            for (int i = 0; i < chars; i++) p1 += progressCharacter;
+            for (int i = 0; i < barSize - chars; i++) p2 += progressCharacter;
+
+            Console.Write('\r');
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.Write(p1);
+            Console.ForegroundColor = ConsoleColor.DarkGreen;
+            Console.Write(p2);
+
+            Console.ResetColor();
+            Console.Write(" {0}%", (perc * 100).ToString("N2"));
+            Console.CursorLeft = left;
+        }
+
+        private static string GetSizeReadable(long i)
 		{
 			var sign = (i < 0 ? "-" : "");
 			double readable = (i < 0 ? -i : i);
@@ -467,8 +608,19 @@ namespace bstrings
 			_regExDesc.Add("urlUser", "\tFinds usernames in URLs");
 			_regExDesc.Add("url3986", "\tFinds URLs according to RFC 3986");
 			_regExDesc.Add("xml", "\tFinds XML/HTML tags");
+            _regExDesc.Add("sid", "\tFinds Microsoft Security Identifiers (SID)");
+            _regExDesc.Add("win_path", "\tFinds Windows style paths (C:\folder1\folder2\file.txt)");
+            _regExDesc.Add("var_set", "\tFinds environment variables being set (OS=Windows_NT)");
+            _regExDesc.Add("reg_path", "\tFinds paths with registry hives");
+            _regExDesc.Add("b64", "\tFinds valid formatted base 64 strings");
 
-			_regExPatterns.Add("xml", @"\A<([A-Z][A-Z0-9]*)\b[^>]*>(.*?)</\1>\z");
+            _regExPatterns.Add("b64", @"^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$");
+            _regExPatterns.Add("reg_path", @"([a-z0-9]\\)*(software\\)|(sam\\)|(system\\)|(security\\)[a-z0-9\\]+");
+            _regExPatterns.Add("var_set", @"^[a-z_0-9]+=[\\/:\*\?<>|;\- _a-z0-9]+");
+            _regExPatterns.Add("win_path",
+                @"(?:""?[a-zA-Z]\:|\\\\[^\\\/\:\*\?\<\>\|]+\\[^\\\/\:\*\?\<\>\|]*)\\(?:[^\\\/\:\*\?\<\>\|]+\\)*\w([^\\\/\:\*\?\<\>\|])*");
+            _regExPatterns.Add("sid", @"^S-\d-\d+-(\d+-){1,14}\d+$");
+            _regExPatterns.Add("xml", @"\A<([A-Z][A-Z0-9]*)\b[^>]*>(.*?)</\1>\z");
 			_regExPatterns.Add("guid", @"\b[A-F0-9]{8}(?:-[A-F0-9]{4}){3}-[A-F0-9]{12}\b");
 			_regExPatterns.Add("usPhone", @"\(?\b[2-9][0-9]{2}\)?[-. ]?[2-9][0-9]{2}[-. ]?[0-9]{4}\b");
 			_regExPatterns.Add("unc", @"^\\\\(?<server>[a-z0-9 %._-]+)\\(?<share>[a-z0-9 $%._-]+)");
@@ -599,5 +751,7 @@ namespace bstrings
 		public bool SortAlpha { get; set; } = false;
 		public bool Quiet { get; set; } = false;
 		public bool GetPatterns { get; set; } = false;
+
+        public string SqliteOutput { get; set; } = string.Empty;
 	}
 }
