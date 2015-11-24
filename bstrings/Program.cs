@@ -210,6 +210,7 @@ namespace bstrings
             var globalCounter = 0;
             var globalHits = 0;
             double globalTimespan = 0;
+            var withBoundaryHits = false;
 
             foreach (var file in files)
             {
@@ -217,6 +218,7 @@ namespace bstrings
                 _sw.Start();
                 var counter = 0;
                 var hits = new HashSet<string>();
+              
 
                 var regPattern = p.Object.LookForRegex;
 
@@ -356,6 +358,69 @@ namespace bstrings
                             }
                             chunkIndex += 1;
                         }
+
+                        //do chunk boundary checks to make sure we get everything and not split things
+
+                        bytesRemaining = fileSizeBytes;
+                        chunkSizeBytes = chunkSizeMb * 1024 * 1024;
+                        offset = chunkSizeBytes - (p.Object.MinimumLength * 2); //move backwards
+                        chunkIndex = 0;
+
+                        var boundaryChunkSize = p.Object.MinimumLength*10*2; //
+
+                        while (bytesRemaining > 0)
+                        {
+                            if (offset + boundaryChunkSize > fileSizeBytes)
+                            {
+                                break;
+                            }
+
+                            using (
+                                var accessor = mmf.CreateViewStream(offset, boundaryChunkSize, MemoryMappedFileAccess.Read)
+                                )
+                            {
+                                var chunk = new byte[boundaryChunkSize];
+
+                                accessor.Read(chunk, 0, boundaryChunkSize);
+
+                                offset += chunkSizeBytes;
+                                bytesRemaining -= chunkSizeBytes;
+
+                                if (p.Object.GetUnicode)
+                                {
+                                    var uh = GetUnicodeHits(chunk, minLength, maxLength);
+                                    foreach (var h in uh)
+                                    {
+                                        hits.Add("  " + h);
+                                    }
+
+                                    if (withBoundaryHits == false && uh.Count > 0)
+                                    {
+                                        withBoundaryHits = uh.Count > 0;
+                                    }
+                                        
+
+                                }
+
+                                if (p.Object.GetAscii)
+                                {
+                                    var ah = GetAsciiHits(chunk, minLength, maxLength);
+                                    foreach (var h in ah)
+                                    {
+                                        hits.Add("  " + h);
+                                    }
+
+                                    if (withBoundaryHits == false && ah.Count > 0)
+                                    {
+                                        withBoundaryHits = true;
+                                    }
+                                }
+
+                                }
+                            chunkIndex += 1;
+                        }
+
+
                     }
                 }
                 catch (Exception ex)
@@ -447,6 +512,13 @@ namespace bstrings
                     var suffix = counter == 1 ? "" : "s";
 
                     _logger.Info("");
+
+                    if (withBoundaryHits)
+                    {
+                        _logger.Info("** Strings prefixed with 2 spaces were hits found across chunk boundaries **");
+                        _logger.Info("");
+                    }
+
                     _logger.Info(
                         $"Found {counter:N0} string{suffix} in {_sw.Elapsed.TotalSeconds:N3} seconds. Average strings/sec: {hits.Count/_sw.Elapsed.TotalSeconds:N0}");
                     globalCounter += counter;
