@@ -515,7 +515,7 @@ namespace bstrings
 
                     if (withBoundaryHits)
                     {
-                        _logger.Info("** Strings prefixed with 2 spaces were hits found across chunk boundaries **");
+                        _logger.Info("** Strings prefixed with 2 spaces are hits found across chunk boundaries **");
                         _logger.Info("");
                     }
 
