@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using Fclp;
+using Fclp.Internals.Extensions;
 using Microsoft.Win32;
 using NLog;
 using NLog.Config;
@@ -55,11 +56,15 @@ namespace bstrings
 				IsCaseSensitive = false
 			};
 
-			p.Setup(arg => arg.File)
-				.As('f')
-				.WithDescription("File to search. This is required").Required();
+		    p.Setup(arg => arg.File)
+		        .As('f')
+		        .WithDescription("File to search. Either this or -d is required");
 
-			p.Setup(arg => arg.SaveTo)
+            p.Setup(arg => arg.Directory)
+    .As('d')
+    .WithDescription("Directory to recursively process. Either this or -f is required");
+
+            p.Setup(arg => arg.SaveTo)
 				.As('o')
 				.WithDescription("File to save results to");
 
@@ -113,6 +118,7 @@ namespace bstrings
 
 			var footer = @"Examples: bstrings.exe -f ""C:\Temp\UsrClass 1.dat"" --ls URL" + "\r\n\t " +
 						 @" bstrings.exe -f ""C:\Temp\someFile.txt"" --lr guid" + "\r\n\t " +
+						 @" bstrings.exe -f ""C:\Temp"" --ls test" + "\r\n\t " +
 						 @" bstrings.exe -f ""C:\Temp\someOtherFile.txt"" --lr cc -sa" + "\r\n\t " +
 						 @" bstrings.exe -f ""C:\Temp\someOtherFile.txt"" --lr cc -sa -m 15 -x 22" + "\r\n\t " +
 						 @" bstrings.exe -f ""C:\Temp\UsrClass 1.dat"" --ls mui -sl" + "\r\n\t ";
@@ -152,13 +158,27 @@ namespace bstrings
 				return;
 			}
 
-			if (!File.Exists(p.Object.File))
-			{
-				_logger.Warn($"'{p.Object.File}' not found. Exiting");
-				return;
-			}
+            if (p.Object.File.IsNullOrEmpty() && p.Object.Directory.IsNullOrEmpty())
+		    {
+                p.HelpOption.ShowHelp(p.Options);
 
-			if (!p.Object.Quiet)
+                _logger.Warn("Either -f or -d is required. Exiting");
+                return;
+            }
+
+            if (p.Object.File.IsNullOrEmpty() == false && !File.Exists(p.Object.File))
+            {
+                _logger.Warn($"File '{p.Object.File}' not found. Exiting");
+                return;
+            }
+
+            if (p.Object.Directory.IsNullOrEmpty() == false && !Directory.Exists(p.Object.Directory))
+            {
+                _logger.Warn($"Directory '{p.Object.Directory}' not found. Exiting");
+                return;
+            }
+
+            if (!p.Object.Quiet)
 			{
 				_logger.Info(header);
 				_logger.Info("");
@@ -166,6 +186,14 @@ namespace bstrings
 
 			_sw = new Stopwatch();
 			_sw.Start();
+
+            var files = new List<string>();
+
+
+		    foreach (var file in files)
+		    {
+		        
+		    }
 
 			var hits = new HashSet<string>();
 
@@ -194,7 +222,6 @@ namespace bstrings
 				_logger.Error($"Error setting up regular expression: {ex.Message}");
 				return;
 			}
-
 
 			if (p.Object.SaveTo.Length > 0)
 			{
@@ -467,8 +494,18 @@ namespace bstrings
 			_regExDesc.Add("urlUser", "\tFinds usernames in URLs");
 			_regExDesc.Add("url3986", "\tFinds URLs according to RFC 3986");
 			_regExDesc.Add("xml", "\tFinds XML/HTML tags");
+            _regExDesc.Add("sid", "\tFinds Microsoft Security Identifiers (SID)");
+            _regExDesc.Add("win_path", "\tFinds Windows style paths (C:\folder1\folder2\file.txt)");
+            _regExDesc.Add("var_set", "\tFinds environment variables being set (OS=Windows_NT)");
+            _regExDesc.Add("reg_path", "\tFinds paths with Registry hives");
+            _regExDesc.Add("b64", "\tFinds valid formatted base 64 strings");
 
-			_regExPatterns.Add("xml", @"\A<([A-Z][A-Z0-9]*)\b[^>]*>(.*?)</\1>\z");
+            _regExPatterns.Add("b64", @"^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$");
+            _regExPatterns.Add("reg_path", @"([a-z0-9]\\)*(software\\)|(sam\\)|(system\\)|(security\\)[a-z0-9\\]+");
+            _regExPatterns.Add("var_set", @"^[a-z_0-9]+=[\\/:\*\?<>|;\- _a-z0-9]+");
+            _regExPatterns.Add("win_path",@"(?:""?[a-zA-Z]\:|\\\\[^\\\/\:\*\?\<\>\|]+\\[^\\\/\:\*\?\<\>\|]*)\\(?:[^\\\/\:\*\?\<\>\|]+\\)*\w([^\\\/\:\*\?\<\>\|])*");
+            _regExPatterns.Add("sid", @"^S-\d-\d+-(\d+-){1,14}\d+$");
+            _regExPatterns.Add("xml", @"\A<([A-Z][A-Z0-9]*)\b[^>]*>(.*?)</\1>\z");
 			_regExPatterns.Add("guid", @"\b[A-F0-9]{8}(?:-[A-F0-9]{4}){3}-[A-F0-9]{12}\b");
 			_regExPatterns.Add("usPhone", @"\(?\b[2-9][0-9]{2}\)?[-. ]?[2-9][0-9]{2}[-. ]?[0-9]{4}\b");
 			_regExPatterns.Add("unc", @"^\\\\(?<server>[a-z0-9 %._-]+)\\(?<share>[a-z0-9 $%._-]+)");
@@ -586,6 +623,7 @@ namespace bstrings
 	internal class ApplicationArguments
 	{
 		public string File { get; set; }
+		public string Directory { get; set; }
 		public string SaveTo { get; set; } = string.Empty;
 		public bool GetAscii { get; set; } = true;
 		public bool GetUnicode { get; set; } = true;
