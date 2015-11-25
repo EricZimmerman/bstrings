@@ -1,7 +1,7 @@
 ﻿0.9.7.0
 
 - Added some new Regex (sid, windows path, variable set, registry hive paths, base64 strings) with thanks to James Habben
-
+- Add detection of strings split across chunk boundaries
 
 
 TODO
