@@ -43,13 +43,11 @@ namespace bstrings
 
             _logger = LogManager.GetCurrentClassLogger();
 
-
             if (!CheckForDotnet46())
             {
                 _logger.Warn(".net 4.6 not detected. Please install .net 4.6 and try again.");
                 return;
             }
-
 
             var p = new FluentCommandLineParser<ApplicationArguments>
             {
@@ -125,7 +123,6 @@ namespace bstrings
 
             p.SetupHelp("?", "help").WithHeader(header).Callback(text => _logger.Info(text + "\r\n" + footer));
 
-
             var result = p.Parse(args);
 
             if (result.HelpCalled)
@@ -184,8 +181,6 @@ namespace bstrings
                 _logger.Info("");
             }
 
-          
-
             var files = new List<string>();
 
             if (p.Object.File.IsNullOrEmpty() == false)
@@ -194,17 +189,15 @@ namespace bstrings
             }
             else
             {
-                files.AddRange(Directory.GetFiles(p.Object.Directory,"*",SearchOption.AllDirectories));
+                files.AddRange(Directory.GetFiles(p.Object.Directory, "*", SearchOption.AllDirectories));
             }
 
             if (!p.Object.Quiet)
             {
                 _logger.Info($"Command line: {string.Join(" ", args)}");
                 _logger.Info("");
-             
             }
 
-          
             StreamWriter sw = null;
 
             var globalCounter = 0;
@@ -218,7 +211,7 @@ namespace bstrings
                 _sw.Start();
                 var counter = 0;
                 var hits = new HashSet<string>();
-              
+
 
                 var regPattern = p.Object.LookForRegex;
 
@@ -369,8 +362,8 @@ namespace bstrings
                         }
 
                         bytesRemaining = fileSizeBytes;
-                        chunkSizeBytes = chunkSizeMb * 1024 * 1024;
-                        offset = chunkSizeBytes - (p.Object.MinimumLength * 2); //move backwards
+                        chunkSizeBytes = chunkSizeMb*1024*1024;
+                        offset = chunkSizeBytes - p.Object.MinimumLength*2; //move backwards
                         chunkIndex = 0;
 
                         var boundaryChunkSize = p.Object.MinimumLength*10*2; //
@@ -383,7 +376,8 @@ namespace bstrings
                             }
 
                             using (
-                                var accessor = mmf.CreateViewStream(offset, boundaryChunkSize, MemoryMappedFileAccess.Read)
+                                var accessor = mmf.CreateViewStream(offset, boundaryChunkSize,
+                                    MemoryMappedFileAccess.Read)
                                 )
                             {
                                 var chunk = new byte[boundaryChunkSize];
@@ -405,8 +399,6 @@ namespace bstrings
                                     {
                                         withBoundaryHits = uh.Count > 0;
                                     }
-                                        
-
                                 }
 
                                 if (p.Object.GetAscii)
@@ -422,12 +414,9 @@ namespace bstrings
                                         withBoundaryHits = true;
                                     }
                                 }
-
-                                }
+                            }
                             chunkIndex += 1;
                         }
-
-
                     }
                 }
                 catch (Exception ex)
@@ -454,7 +443,6 @@ namespace bstrings
                     hits = new HashSet<string>(tempList);
                 }
 
-
                 //set up highlighting
                 var words = new HashSet<string>();
                 if (p.Object.LookForString.Length > 0)
@@ -467,7 +455,6 @@ namespace bstrings
                 }
 
                 AddHighlightingRules(words.ToList(), regPattern.Length > 0);
-
 
                 if (p.Object.SaveTo.Length > 0)
                 {
@@ -533,11 +520,11 @@ namespace bstrings
                     globalTimespan += _sw.Elapsed.TotalSeconds;
                     if (files.Count > 1)
                     {
-                        _logger.Info("-------------------------------------------------------------------------------------\r\n");
+                        _logger.Info(
+                            "-------------------------------------------------------------------------------------\r\n");
                     }
                 }
             }
-
 
             if (!p.Object.Quiet && files.Count > 1)
             {
@@ -545,8 +532,7 @@ namespace bstrings
 
                 _logger.Info("");
                 _logger.Info(
-                    $"Found {globalCounter:N0} string{suffix} in {globalTimespan:N3} seconds. Average strings/sec: {globalHits / globalTimespan:N0}");
-           
+                    $"Found {globalCounter:N0} string{suffix} in {globalTimespan:N3} seconds. Average strings/sec: {globalHits/globalTimespan:N0}");
             }
         }
 
