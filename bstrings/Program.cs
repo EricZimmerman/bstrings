@@ -361,6 +361,13 @@ namespace bstrings
 
                         //do chunk boundary checks to make sure we get everything and not split things
 
+                        if (!p.Object.Quiet)
+                        {
+                            _logger.Info(
+                                "Primary seazrch complete. Looking for strings across chunk boundaries...");
+                            _logger.Info("");
+                        }
+
                         bytesRemaining = fileSizeBytes;
                         chunkSizeBytes = chunkSizeMb * 1024 * 1024;
                         offset = chunkSizeBytes - (p.Object.MinimumLength * 2); //move backwards
