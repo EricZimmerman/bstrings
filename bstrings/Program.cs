@@ -357,7 +357,7 @@ namespace bstrings
                         if (!p.Object.Quiet)
                         {
                             _logger.Info(
-                                "Primary seazrch complete. Looking for strings across chunk boundaries...");
+                                "Primary search complete. Looking for strings across chunk boundaries...");
                             _logger.Info("");
                         }
 
@@ -597,9 +597,9 @@ namespace bstrings
             _regExDesc.Add("url3986", "\tFinds URLs according to RFC 3986");
             _regExDesc.Add("xml", "\tFinds XML/HTML tags");
             _regExDesc.Add("sid", "\tFinds Microsoft Security Identifiers (SID)");
-            _regExDesc.Add("win_path", "\tFinds Windows style paths (C:\folder1\folder2\file.txt)");
+            _regExDesc.Add("win_path", "Finds Windows style paths (C:\folder1\folder2\file.txt)");
             _regExDesc.Add("var_set", "\tFinds environment variables being set (OS=Windows_NT)");
-            _regExDesc.Add("reg_path", "\tFinds paths with Registry hives");
+            _regExDesc.Add("reg_path", "Finds paths related to Registry hives");
             _regExDesc.Add("b64", "\tFinds valid formatted base 64 strings");
 
             _regExPatterns.Add("b64",
