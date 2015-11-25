@@ -363,10 +363,10 @@ namespace bstrings
 
                         bytesRemaining = fileSizeBytes;
                         chunkSizeBytes = chunkSizeMb*1024*1024;
-                        offset = chunkSizeBytes - p.Object.MinimumLength*2; //move backwards
+                        offset = chunkSizeBytes - p.Object.MinimumLength*10*2; //move starting point backwards for our starting point
                         chunkIndex = 0;
 
-                        var boundaryChunkSize = p.Object.MinimumLength*10*2; //
+                        var boundaryChunkSize = (p.Object.MinimumLength*10*2) * 2; //grab the same # of bytes on both sides of the boundary
 
                         while (bytesRemaining > 0)
                         {
