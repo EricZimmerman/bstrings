@@ -7,12 +7,17 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
+using Alphaleonis.Win32.Filesystem;
 using Fclp;
 using Fclp.Internals.Extensions;
 using Microsoft.Win32;
 using NLog;
 using NLog.Config;
 using NLog.Targets;
+using Directory = Alphaleonis.Win32.Filesystem.Directory;
+using File = Alphaleonis.Win32.Filesystem.File;
+using FileInfo = Alphaleonis.Win32.Filesystem.FileInfo;
+using Path = Alphaleonis.Win32.Filesystem.Path;
 
 namespace bstrings
 {
@@ -189,7 +194,8 @@ namespace bstrings
             }
             else
             {
-                files.AddRange(Directory.GetFiles(p.Object.Directory, "*", SearchOption.AllDirectories));
+                
+                files.AddRange(Directory.EnumerateFiles(p.Object.Directory, "*", SearchOption.AllDirectories));
             }
 
             if (!p.Object.Quiet)
@@ -207,6 +213,8 @@ namespace bstrings
 
             foreach (var file in files)
             {
+                
+
                 _sw = new Stopwatch();
                 _sw.Start();
                 var counter = 0;
@@ -305,7 +313,11 @@ namespace bstrings
 
                 try
                 {
-                    using (var mmf = MemoryMappedFile.CreateFromFile(file, FileMode.Open, "source"))
+
+                    //var s1 = File.GetFileSystemEntryInfo(file).LongFullPath;
+
+                    
+                    using (var mmf = MemoryMappedFile.CreateFromFile(File.Open(File.GetFileSystemEntryInfo(file).LongFullPath, FileMode.Open, PathFormat.LongFullPath), "source",0,MemoryMappedFileAccess.Read, HandleInheritability.None, false))
                     {
                         while (bytesRemaining > 0)
                         {
