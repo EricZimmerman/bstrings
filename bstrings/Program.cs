@@ -112,7 +112,7 @@ namespace bstrings
             p.Setup(arg => arg.SortLength)
                 .As("sl").SetDefault(false).WithDescription("Sort results by length");
 
-            //  p.Setup(arg => arg.ShowOffset).As('o').SetDefault(false).WithDescription("Show offset to hit before string");
+            p.Setup(arg => arg.ShowOffset).As("off").SetDefault(false).WithDescription("Show offset to hit after string");
 
             var header =
                 $"bstrings version {Assembly.GetExecutingAssembly().GetName().Version}" +
@@ -213,7 +213,10 @@ namespace bstrings
 
             foreach (var file in files)
             {
-                
+                if (File.Exists(file) == false)
+                {
+                    _logger.Warn($"'{file}' does not exist! Skipping");
+                }
 
                 _sw = new Stopwatch();
                 _sw.Start();
@@ -313,11 +316,7 @@ namespace bstrings
 
                 try
                 {
-
-                    //var s1 = File.GetFileSystemEntryInfo(file).LongFullPath;
-
-                    
-                    using (var mmf = MemoryMappedFile.CreateFromFile(File.Open(File.GetFileSystemEntryInfo(file).LongFullPath, FileMode.Open, PathFormat.LongFullPath), "source",0,MemoryMappedFileAccess.Read, HandleInheritability.None, false))
+                    using (var mmf = MemoryMappedFile.CreateFromFile(File.Open(File.GetFileSystemEntryInfo(file).LongFullPath, FileMode.Open,FileAccess.Read,FileShare.Read, PathFormat.LongFullPath), "source",0,MemoryMappedFileAccess.Read, HandleInheritability.None, false))
                     {
                         while (bytesRemaining > 0)
                         {
@@ -333,13 +332,10 @@ namespace bstrings
                                 var chunk = new byte[chunkSizeBytes];
 
                                 accessor.Read(chunk, 0, chunkSizeBytes);
-
-                                offset += chunkSizeBytes;
-                                bytesRemaining -= chunkSizeBytes;
-
+                                
                                 if (p.Object.GetUnicode)
                                 {
-                                    var uh = GetUnicodeHits(chunk, minLength, maxLength);
+                                    var uh = GetUnicodeHits(chunk, minLength, maxLength, offset,p.Object.ShowOffset);
                                     foreach (var h in uh)
                                     {
                                         hits.Add(h);
@@ -348,12 +344,15 @@ namespace bstrings
 
                                 if (p.Object.GetAscii)
                                 {
-                                    var ah = GetAsciiHits(chunk, minLength, maxLength);
+                                    var ah = GetAsciiHits(chunk, minLength, maxLength, offset, p.Object.ShowOffset);
                                     foreach (var h in ah)
                                     {
                                         hits.Add(h);
                                     }
                                 }
+
+                                offset += chunkSizeBytes;
+                                bytesRemaining -= chunkSizeBytes;
 
                                 if (!p.Object.Quiet)
                                 {
@@ -395,13 +394,10 @@ namespace bstrings
                                 var chunk = new byte[boundaryChunkSize];
 
                                 accessor.Read(chunk, 0, boundaryChunkSize);
-
-                                offset += chunkSizeBytes;
-                                bytesRemaining -= chunkSizeBytes;
-
+                                
                                 if (p.Object.GetUnicode)
                                 {
-                                    var uh = GetUnicodeHits(chunk, minLength, maxLength);
+                                    var uh = GetUnicodeHits(chunk, minLength, maxLength, offset, p.Object.ShowOffset);
                                     foreach (var h in uh)
                                     {
                                         hits.Add("  " + h);
@@ -415,7 +411,7 @@ namespace bstrings
 
                                 if (p.Object.GetAscii)
                                 {
-                                    var ah = GetAsciiHits(chunk, minLength, maxLength);
+                                    var ah = GetAsciiHits(chunk, minLength, maxLength, offset, p.Object.ShowOffset);
                                     foreach (var h in ah)
                                     {
                                         hits.Add("  " + h);
@@ -426,6 +422,10 @@ namespace bstrings
                                         withBoundaryHits = true;
                                     }
                                 }
+
+                                offset += chunkSizeBytes;
+                                bytesRemaining -= chunkSizeBytes;
+
                             }
                             chunkIndex += 1;
                         }
@@ -692,29 +692,77 @@ namespace bstrings
             return sorted;
         }
 
-        private static List<string> GetUnicodeHits(byte[] bytes, int minSize, int maxSize)
+        private static List<string> GetUnicodeHits(byte[] bytes, int minSize, int maxSize, long currentOffset, bool withOffsets)
         {
             var maxString = maxSize == -1 ? "" : maxSize.ToString();
-            var mi2 = string.Format("{0}{1}{2}{3}{4}", "{", minSize, ",", maxString, "}");
+            var mi2 = $"{"{"}{minSize}{","}{maxString}{"}"}";
 
             const string uniRange = "[\u0020-\u007E]";
             var regUni = new Regex($"{uniRange}{mi2}");
             var uniString = Encoding.Unicode.GetString(bytes);
 
-            return (from Match match in regUni.Matches(uniString) select match.Value.Trim()).ToList();
+            var hits = new List<string>();
+
+            foreach (Match match in regUni.Matches(uniString))
+            {
+                if (withOffsets)
+                {
+                    var actualOffset = (currentOffset + match.Index) * 2;
+
+                    hits.Add($"{match.Value.Trim()}{'\0'}0x{actualOffset:X}");
+                }
+                else
+                {
+                    hits.Add(match.Value.Trim());
+                }
+            }
+
+            return hits; 
         }
 
-        private static List<string> GetAsciiHits(byte[] bytes, int minSize, int maxSize)
+        private static List<string> GetAsciiHits(byte[] bytes, int minSize, int maxSize, long currentOffset, bool withOffsets)
         {
             var maxString = maxSize == -1 ? "" : maxSize.ToString();
-            var mi2 = string.Format("{0}{1}{2}{3}{4}", "{", minSize, ",", maxString, "}");
+            var mi2 = $"{"{"}{minSize}{","}{maxString}{"}"}";
 
             const string ascRange = "[\x20-\x7E]";
             var regUni = new Regex($"{ascRange}{mi2}");
-            var uniString = Encoding.UTF8.GetString(bytes);
+            var utfString = Encoding.UTF8.GetString(bytes);
 
-            return (from Match match in regUni.Matches(uniString) select match.Value.Trim()).ToList();
+            var hits = new List<string>();
+
+            string hexString = null;
+
+            if (withOffsets)
+            {
+                hexString = BitConverter.ToString(bytes);
+            }
+
+            foreach (Match match in regUni.Matches(utfString))
+            {
+                if (withOffsets)
+                {
+                    var matchBytes = BitConverter.ToString(Encoding.UTF8.GetBytes(match.Value));
+
+
+
+
+                    var foo = hexString.IndexOf(matchBytes, match.Index, StringComparison.Ordinal) / 3;
+
+                    var actualOffset = (currentOffset + foo);
+
+                    hits.Add($"{match.Value.Trim()}{'\0'}{'\0'}0x{actualOffset:X}");
+                }
+                else
+                {
+                    hits.Add(match.Value.Trim());
+                }
+            }
+
+            return hits; 
         }
+
+
 
         private static void SetupNLog()
         {
