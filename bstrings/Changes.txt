@@ -1,7 +1,7 @@
-﻿0.9.7.0
+﻿0.9.9.0
 
-- Added some new Regex (sid, windows path, variable set, registry hive paths, base64 strings) with thanks to James Habben
-- Add detection of strings split across chunk boundaries
+- Added --off switch to show offsets of string hits. The type of hit will be shown in parenthesis after the offset (A=ASCII, U=Unicode)
+- Change from UTF8 to Windows-1252 encoding to find non-Unicode strings
 
 
 TODO
