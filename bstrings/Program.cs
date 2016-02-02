@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using Alphaleonis.Win32.Filesystem;
+using Alphaleonis.Win32.Security;
 using Fclp;
 using Fclp.Internals.Extensions;
 using Microsoft.Win32;
@@ -194,8 +195,15 @@ namespace bstrings
             }
             else
             {
-                
-                files.AddRange(Directory.EnumerateFiles(p.Object.Directory, "*", SearchOption.AllDirectories));
+                try
+                {
+                    files.AddRange(Directory.EnumerateFiles(p.Object.Directory, "*", SearchOption.AllDirectories));
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error($"Error getting files in '{p.Object.Directory}'. Error message: {ex.Message}");
+                    return;
+                }
             }
 
             if (!p.Object.Quiet)
