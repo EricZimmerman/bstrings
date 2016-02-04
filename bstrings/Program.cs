@@ -113,7 +113,7 @@ namespace bstrings
             p.Setup(arg => arg.SortLength)
                 .As("sl").SetDefault(false).WithDescription("Sort results by length");
 
-            p.Setup(arg => arg.ShowOffset).As("off").SetDefault(false).WithDescription("Show offset to hit after string");
+            p.Setup(arg => arg.ShowOffset).As("off").SetDefault(false).WithDescription("Show offset to hit after string, followed by the encoding (A=1252, U=Unicode)");
 
             var header =
                 $"bstrings version {Assembly.GetExecutingAssembly().GetName().Version}" +
