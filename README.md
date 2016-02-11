@@ -20,12 +20,19 @@ A better strings utility!
             u               If set, look for Unicode strings. Default is true. Use -u false to disable
             x               Maximum string length. Default is unlimited
             ls              String to look for. When set, only matching strings are returned.
+            ar              Range of characters to search for in 'Codepage' strings. Specify as a range of characters in hex format and enclose in quotes. Default is [\x20 -\x7E]
+            ur              Range of characters to search for in Unicode strings. Specify as a range of characters in hex format and enclose in quotes. Default is [\u0020-\u007E]
+            cp              Codepage to use. Default is 1252. Use the Identifier value for code pages at https://goo.gl/ig6DxW
+            mask            When using -d, file mask to search for. * and ? are supported. This option has no effect when using -f
             lr              Regex to look for. When set, only matching strings are returned.
             sa              Sort results alphabetically
             sl              Sort results by length
     
     Examples: bstrings.exe -f "C:\Temp\UsrClass 1.dat" --ls URL
               bstrings.exe -f "C:\Temp\someFile.txt" --lr guid
+              bstrings.exe -d "C:\Temp" --mask "*.dll"
+              bstrings.exe -d "C:\Temp" --ar "[\x20-\x37]"
+              bstrings.exe -d "C:\Temp" --cp 10007
               bstrings.exe -d "C:\Temp" --ls test
               bstrings.exe -f "C:\Temp\someOtherFile.txt" --lr cc -sa
               bstrings.exe -f "C:\Temp\someOtherFile.txt" --lr cc -sa -m 15 -x 22
