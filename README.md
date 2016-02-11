@@ -4,7 +4,7 @@ A better strings utility!
 
     λ bstrings.exe
 
-    bstrings version 0.9.7.0
+    bstrings version 1.0.0.0
     
     Author: Eric Zimmerman (saericzimmerman@gmail.com)
     https://github.com/EricZimmerman/bstrings
