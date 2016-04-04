@@ -92,6 +92,9 @@ namespace bstrings
             _fluentCommandLineParser.Setup(arg => arg.Quiet)
                 .As('q').SetDefault(false).WithDescription("Quiet mode (Do not show header or total number of hits)");
 
+            _fluentCommandLineParser.Setup(arg => arg.QuietQuiet)
+       .As('s').SetDefault(false).WithDescription("Really Quiet mode (Do not display hits to console. Speeds up processing when using -o)");
+
             _fluentCommandLineParser.Setup(arg => arg.MaximumLength)
                 .As('x').SetDefault(-1).WithDescription("Maximum string length. Default is unlimited");
 
@@ -527,7 +530,12 @@ namespace bstrings
                             hit.IndexOf(_fluentCommandLineParser.Object.LookForString, StringComparison.InvariantCultureIgnoreCase) >= 0)
                         {
                             counter += 1;
-                            _logger.Info(hit);
+
+                            if (!_fluentCommandLineParser.Object.QuietQuiet)
+                            {
+                                _logger.Info(hit);
+                            }
+
                             sw?.WriteLine(hit);
                         }
                         else if (_fluentCommandLineParser.Object.LookForRegex.Length > 0)
@@ -537,14 +545,24 @@ namespace bstrings
                                 continue;
                             }
                             counter += 1;
-                            _logger.Info(hit);
+
+                            if (!_fluentCommandLineParser.Object.QuietQuiet)
+                            {
+                                _logger.Info(hit);
+                            }
+
                             sw?.WriteLine(hit);
                         }
                     }
                     else
                     {
                         counter += 1;
-                        _logger.Info(hit);
+
+                        if (!_fluentCommandLineParser.Object.QuietQuiet)
+                        {
+                            _logger.Info(hit);
+                        }
+
                         sw?.WriteLine(hit);
                     }
                 }
@@ -882,6 +900,7 @@ namespace bstrings
         public bool SortLength { get; set; } = false;
         public bool SortAlpha { get; set; } = false;
         public bool Quiet { get; set; } = false;
+        public bool QuietQuiet { get; set; } = false;
         public bool GetPatterns { get; set; } = false;
     }
 }
