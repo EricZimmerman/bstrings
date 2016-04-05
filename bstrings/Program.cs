@@ -96,7 +96,7 @@ namespace bstrings
        .As('s').SetDefault(false).WithDescription("Really Quiet mode (Do not display hits to console. Speeds up processing when using -o)");
 
             _fluentCommandLineParser.Setup(arg => arg.MaximumLength)
-                .As('x').SetDefault(-1).WithDescription("Maximum string length. Default is unlimited");
+                .As('x').SetDefault(-1).WithDescription("Maximum string length. Default is unlimited\r\n");
 
             _fluentCommandLineParser.Setup(arg => arg.GetPatterns)
                 .As('p').SetDefault(false).WithDescription("Display list of built in regular expressions");
@@ -106,6 +106,11 @@ namespace bstrings
                 .SetDefault(string.Empty)
                 .WithDescription("String to look for. When set, only matching strings are returned.");
 
+            _fluentCommandLineParser.Setup(arg => arg.LookForRegex)
+               .As("lr")
+               .SetDefault(string.Empty)
+               .WithDescription("Regex to look for. When set, only strings matching the regex are returned.\r\n");
+
             _fluentCommandLineParser.Setup(arg => arg.AsciiRange)
                 .As("ar")
                 .SetDefault("[\x20-\x7E]")
@@ -114,7 +119,7 @@ namespace bstrings
             _fluentCommandLineParser.Setup(arg => arg.UnicodeRange)
                 .As("ur")
                 .SetDefault("[\u0020-\u007E]")
-                .WithDescription(@"Range of characters to search for in Unicode strings. Specify as a range of characters in hex format and enclose in quotes. Default is [\u0020-\u007E]");
+                .WithDescription("Range of characters to search for in Unicode strings. Specify as a range of characters in hex format and enclose in quotes. Default is [\\u0020-\\u007E]\r\n");
 
             _fluentCommandLineParser.Setup(arg => arg.CodePage)
                 .As("cp")
@@ -126,10 +131,7 @@ namespace bstrings
                .SetDefault(string.Empty)
                .WithDescription("When using -d, file mask to search for. * and ? are supported. This option has no effect when using -f");
 
-            _fluentCommandLineParser.Setup(arg => arg.LookForRegex)
-                .As("lr")
-                .SetDefault(string.Empty)
-                .WithDescription("Regex to look for. When set, only matching strings are returned.");
+            _fluentCommandLineParser.Setup(arg => arg.ShowOffset).As("off").SetDefault(false).WithDescription($"Show offset to hit after string, followed by the encoding (A={_fluentCommandLineParser.Object.CodePage}, U=Unicode)\r\n");
 
             _fluentCommandLineParser.Setup(arg => arg.SortAlpha)
                 .As("sa").SetDefault(false).WithDescription("Sort results alphabetically");
@@ -137,7 +139,7 @@ namespace bstrings
             _fluentCommandLineParser.Setup(arg => arg.SortLength)
                 .As("sl").SetDefault(false).WithDescription("Sort results by length");
 
-            _fluentCommandLineParser.Setup(arg => arg.ShowOffset).As("off").SetDefault(false).WithDescription($"Show offset to hit after string, followed by the encoding (A={_fluentCommandLineParser.Object.CodePage}, U=Unicode)");
+ 
 
             var header =
                 $"bstrings version {Assembly.GetExecutingAssembly().GetName().Version}" +
