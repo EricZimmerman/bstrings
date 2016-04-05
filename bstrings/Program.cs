@@ -109,7 +109,18 @@ namespace bstrings
             _fluentCommandLineParser.Setup(arg => arg.LookForRegex)
                .As("lr")
                .SetDefault(string.Empty)
-               .WithDescription("Regex to look for. When set, only strings matching the regex are returned.\r\n");
+               .WithDescription("Regex to look for. When set, only strings matching the regex are returned.");
+
+            _fluentCommandLineParser.Setup(arg => arg.StringFile)
+   .As("fs")
+   .SetDefault(string.Empty)
+   .WithDescription("File containing strings to look for. When set, only matching strings are returned.");
+
+            _fluentCommandLineParser.Setup(arg => arg.RegexFile)
+        .As("fr")
+        .SetDefault(string.Empty)
+        .WithDescription("File containing regex patterns to look for. When set, only strings matching regex patterns are returned.\r\n");
+
 
             _fluentCommandLineParser.Setup(arg => arg.AsciiRange)
                 .As("ar")
@@ -519,6 +530,43 @@ namespace bstrings
                     sw = new StreamWriter(_fluentCommandLineParser.Object.SaveTo, true);
                 }
 
+
+                List<string> FileStrings = null;
+                List<string> RegexStrings = null;
+
+                if (_fluentCommandLineParser.Object.StringFile.Length > 0 ||
+                    _fluentCommandLineParser.Object.RegexFile.Length > 0)
+                {
+                    if (_fluentCommandLineParser.Object.StringFile.Length > 0 )
+                    {
+                        if (File.Exists(_fluentCommandLineParser.Object.StringFile))
+                        {
+                            FileStrings = File.ReadAllLines(_fluentCommandLineParser.Object.StringFile).ToList();
+                        }
+                        else
+                        {
+                            _logger.Error($"Strings file '{_fluentCommandLineParser.Object.StringFile}' not found.");
+                        }
+                      
+                    }
+                   
+
+                    if (_fluentCommandLineParser.Object.RegexFile.Length > 0 )
+                    {
+                        if (File.Exists(_fluentCommandLineParser.Object.RegexFile))
+                        {
+                            RegexStrings = File.ReadAllLines(_fluentCommandLineParser.Object.RegexFile).ToList();
+                        }
+ else
+                    {
+                        _logger.Error($"Regex file '{_fluentCommandLineParser.Object.RegexFile}' not found.");
+                    }
+                       
+                    }
+                   
+                }
+
+
                 foreach (var hit in hits)
                 {
                     if (hit.Length == 0)
@@ -542,6 +590,7 @@ namespace bstrings
                         }
                         else if (_fluentCommandLineParser.Object.LookForRegex.Length > 0)
                         {
+                            
                             if (!reg.IsMatch(hit))
                             {
                                 continue;
@@ -556,6 +605,68 @@ namespace bstrings
                             sw?.WriteLine(hit);
                         }
                     }
+                    else if (_fluentCommandLineParser.Object.StringFile.Length > 0 || _fluentCommandLineParser.Object.RegexFile.Length > 0)
+                    {
+                        if (FileStrings!=null)
+                        {
+                                foreach (var fileString in FileStrings)
+                                {
+                                    if (fileString.Trim().Length == 0)
+                                    {
+                                        continue;
+                                    }
+                                    if (hit.IndexOf(fileString, StringComparison.InvariantCultureIgnoreCase) >= 0)
+                                    {
+                                        counter += 1;
+
+                                        if (!_fluentCommandLineParser.Object.QuietQuiet)
+                                        {
+                                            _logger.Info(hit);
+                                        }
+
+                                        sw?.WriteLine(hit);
+                                    }
+                                }
+                            }
+
+                        if (RegexStrings != null)
+                        {
+                            foreach (var regString in RegexStrings)
+                            {
+                                if (regString.Trim().Length == 0)
+                                {
+                                    continue;
+                                }
+
+                                try
+                                {
+                                    var reg1 = new Regex(regString,
+                                        RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
+
+                                    if (!reg1.IsMatch(hit))
+                                    {
+                                        continue;
+                                    }
+                                    counter += 1;
+
+                                    if (!_fluentCommandLineParser.Object.QuietQuiet)
+                                    {
+                                        _logger.Info(hit);
+                                    }
+
+                                    sw?.WriteLine(hit);
+                                }
+                                catch (Exception ex)
+                                {
+                                    _logger.Error($"Error setting up regular expression '{regString}': {ex.Message}");
+                                    
+                                }
+                              
+                            }
+                        }
+
+                    }
+
                     else
                     {
                         counter += 1;
@@ -891,6 +1002,8 @@ namespace bstrings
         public bool GetUnicode { get; set; } = true;
         public string LookForString { get; set; } = string.Empty;
         public string FileMask { get; set; } = string.Empty;
+        public string StringFile { get; set; } = string.Empty;
+        public string RegexFile { get; set; } = string.Empty;
         public string LookForRegex { get; set; } = string.Empty;
         public string AsciiRange { get; set; } = "[\x20-\x7E]";
         public string UnicodeRange { get; set; } = "[\u0020-\u007E]";
