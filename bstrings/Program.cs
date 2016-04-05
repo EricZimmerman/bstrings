@@ -175,6 +175,7 @@ namespace bstrings
 
             var footer = @"Examples: bstrings.exe -f ""C:\Temp\UsrClass 1.dat"" --ls URL" + "\r\n\t " +
                          @" bstrings.exe -f ""C:\Temp\someFile.txt"" --lr guid" + "\r\n\t " +
+                         @" bstrings.exe -f ""C:\Temp\aBigFile.bin"" --fs c:\temp\searchStrings.txt --fr c:\temp\searchRegex.txt -s" + "\r\n\t " +
                          @" bstrings.exe -d ""C:\Temp"" --mask ""*.dll""" + "\r\n\t " +
                          @" bstrings.exe -d ""C:\Temp"" --ar ""[\x20-\x37]""" + "\r\n\t " +
                          @" bstrings.exe -d ""C:\Temp"" --cp 10007" + "\r\n\t " +
