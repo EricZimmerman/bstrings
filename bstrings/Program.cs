@@ -153,7 +153,7 @@ namespace bstrings
                 .As("ro")
                 .SetDefault(false)
                 .WithDescription(
-                    "When true, list the string matched by regex pattern vs string the pattern was found in (This may result in duplicate strings in output");
+                    "When true, list the string matched by regex pattern vs string the pattern was found in (This may result in duplicate strings in output. ~ denotes approx. offset)");
 
             _fluentCommandLineParser.Setup(arg => arg.ShowOffset)
                 .As("off")
@@ -324,7 +324,7 @@ namespace bstrings
                 try
                 {
                     reg = new Regex(regPattern,
-                        RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
+                        RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
                 }
                 catch (Exception ex)
                 {
@@ -581,6 +581,9 @@ namespace bstrings
                         if (File.Exists(_fluentCommandLineParser.Object.StringFile))
                         {
                             FileStrings = File.ReadAllLines(_fluentCommandLineParser.Object.StringFile).ToList();
+
+                            AddHighlightingRules(FileStrings);
+
                         }
                         else
                         {
@@ -594,6 +597,8 @@ namespace bstrings
                         if (File.Exists(_fluentCommandLineParser.Object.RegexFile))
                         {
                             RegexStrings = File.ReadAllLines(_fluentCommandLineParser.Object.RegexFile).ToList();
+
+                            AddHighlightingRules(RegexStrings, true);
                         }
                         else
                         {
@@ -608,6 +613,12 @@ namespace bstrings
                     if (hit.Length == 0)
                     {
                         continue;
+                    }
+
+                    var hitoffset = "";
+                    if (_fluentCommandLineParser.Object.ShowOffset)
+                    {
+                        hitoffset = hit.Split('\t').Last();
                     }
 
                     if (_fluentCommandLineParser.Object.LookForString.Length > 0 ||
@@ -640,7 +651,7 @@ namespace bstrings
                                 {
                                     foreach (var match in reg.Matches(hit))
                                     {
-                                        _logger.Info(match);
+                                        _logger.Info($"{match}\t~{hitoffset}");
                                     }
                                 }
                                 else
@@ -653,7 +664,7 @@ namespace bstrings
                             {
                                 foreach (var match in reg.Matches(hit))
                                 {
-                                    sw?.WriteLine(match);
+                                    sw?.WriteLine($"{match}\t~{hitoffset}");
                                 }
                             }
                             else
@@ -713,7 +724,7 @@ namespace bstrings
                                         {
                                             foreach (var match in reg1.Matches(hit))
                                             {
-                                                _logger.Info(match);
+                                                _logger.Info($"{match}\t~{hitoffset}");
                                             }
                                         }
                                         else
@@ -726,7 +737,7 @@ namespace bstrings
                                     {
                                         foreach (var match in reg1.Matches(hit))
                                         {
-                                            sw?.WriteLine(match);
+                                            sw?.WriteLine($"{match}\t~{hitoffset}");
                                         }
                                     }
                                     else
@@ -850,7 +861,8 @@ namespace bstrings
 
             _regExDesc.Add("ipv4", "\tFinds IP version 4 addresses");
             _regExDesc.Add("ipv6", "\tFinds IP version 6 addresses");
-            _regExDesc.Add("email", "\tFinds email addresses");
+            _regExDesc.Add("email", "\tFinds embedded email addresses");
+            _regExDesc.Add("email_strict", "Finds email addresses using a more strict pattern");
             _regExDesc.Add("zip", "\tFinds zip codes");
             _regExDesc.Add("urlUser", "\tFinds usernames in URLs");
             _regExDesc.Add("url3986", "\tFinds URLs according to RFC 3986");
@@ -879,7 +891,8 @@ namespace bstrings
             _regExPatterns.Add("ipv4",
                 @"\b(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\b");
             _regExPatterns.Add("ipv6", @"(?<![:.\w])(?:[A-F0-9]{1,4}:){7}[A-F0-9]{1,4}(?![:.\w])");
-            _regExPatterns.Add("email", @"\A\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,6}\b\z");
+            _regExPatterns.Add("email_strict", @"\A\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,6}\b\z");
+            _regExPatterns.Add("email", @"[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?");
             _regExPatterns.Add("zip", @"\A\b[0-9]{5}(?:-[0-9]{4})?\b\z");
             _regExPatterns.Add("urlUser", @"^[a-z0-9+\-.]+://(?<user>[a-z0-9\-._~%!$&'()*+,;=]+)@");
             _regExPatterns.Add("url3986", @"^
@@ -909,7 +922,7 @@ namespace bstrings
                 fgColor = rule.ForegroundColor;
             }
 
-            target.WordHighlightingRules.Clear();
+           // target.WordHighlightingRules.Clear();
 
             foreach (var word in words)
             {
