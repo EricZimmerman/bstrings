@@ -25,8 +25,8 @@ namespace bstrings
     {
         private static Logger _logger;
         private static Stopwatch _sw;
-        private static readonly Dictionary<string, string> _regExPatterns = new Dictionary<string, string>();
-        private static readonly Dictionary<string, string> _regExDesc = new Dictionary<string, string>();
+        private static readonly Dictionary<string, string> RegExPatterns = new Dictionary<string, string>();
+        private static readonly Dictionary<string, string> RegExDesc = new Dictionary<string, string>();
         private static FluentCommandLineParser<ApplicationArguments> _fluentCommandLineParser;
 
         private static bool CheckForDotnet46()
@@ -36,7 +36,7 @@ namespace bstrings
                     RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry32)
                         .OpenSubKey("SOFTWARE\\Microsoft\\NET Framework Setup\\NDP\\v4\\Full\\"))
             {
-                var releaseKey = Convert.ToInt32(ndpKey.GetValue("Release"));
+                var releaseKey = Convert.ToInt32(ndpKey?.GetValue("Release"));
 
                 return releaseKey >= 393295;
             }
@@ -85,7 +85,7 @@ namespace bstrings
             _fluentCommandLineParser.Setup(arg => arg.MinimumLength)
                 .As('m').SetDefault(3).WithDescription("Minimum string length. Default is 3");
 
-            _fluentCommandLineParser.Setup(arg => arg.BlockSizeMB)
+            _fluentCommandLineParser.Setup(arg => arg.BlockSizeMb)
                 .As('b').SetDefault(512).WithDescription("Chunk size in MB. Valid range is 1 to 1024. Default is 512");
 
             _fluentCommandLineParser.Setup(arg => arg.Quiet)
@@ -175,7 +175,8 @@ namespace bstrings
 
             var footer = @"Examples: bstrings.exe -f ""C:\Temp\UsrClass 1.dat"" --ls URL" + "\r\n\t " +
                          @" bstrings.exe -f ""C:\Temp\someFile.txt"" --lr guid" + "\r\n\t " +
-                         @" bstrings.exe -f ""C:\Temp\aBigFile.bin"" --fs c:\temp\searchStrings.txt --fr c:\temp\searchRegex.txt -s" + "\r\n\t " +
+                         @" bstrings.exe -f ""C:\Temp\aBigFile.bin"" --fs c:\temp\searchStrings.txt --fr c:\temp\searchRegex.txt -s" +
+                         "\r\n\t " +
                          @" bstrings.exe -d ""C:\Temp"" --mask ""*.dll""" + "\r\n\t " +
                          @" bstrings.exe -d ""C:\Temp"" --ar ""[\x20-\x37]""" + "\r\n\t " +
                          @" bstrings.exe -d ""C:\Temp"" --cp 10007" + "\r\n\t " +
@@ -198,9 +199,9 @@ namespace bstrings
             if (_fluentCommandLineParser.Object.GetPatterns)
             {
                 _logger.Info("Name \t\tDescription");
-                foreach (var regExPattern in _regExPatterns)
+                foreach (var regExPattern in RegExPatterns)
                 {
-                    var desc = _regExDesc[regExPattern.Key];
+                    var desc = RegExDesc[regExPattern.Key];
                     _logger.Info($"{regExPattern.Key}\t{desc}");
                 }
 
@@ -308,9 +309,9 @@ namespace bstrings
 
                 var regPattern = _fluentCommandLineParser.Object.LookForRegex;
 
-                if (_regExPatterns.ContainsKey(_fluentCommandLineParser.Object.LookForRegex))
+                if (RegExPatterns.ContainsKey(_fluentCommandLineParser.Object.LookForRegex))
                 {
-                    regPattern = _regExPatterns[_fluentCommandLineParser.Object.LookForRegex];
+                    regPattern = RegExPatterns[_fluentCommandLineParser.Object.LookForRegex];
                 }
 
                 if (regPattern.Length > 0 && !_fluentCommandLineParser.Object.Quiet)
@@ -319,7 +320,7 @@ namespace bstrings
                     _logger.Info("");
                 }
 
-                Regex reg = null;
+                Regex reg;
 
                 try
                 {
@@ -379,10 +380,10 @@ namespace bstrings
                     maxLength = _fluentCommandLineParser.Object.MaximumLength;
                 }
 
-                var chunkSizeMb = _fluentCommandLineParser.Object.BlockSizeMB < 1 ||
-                                  _fluentCommandLineParser.Object.BlockSizeMB > 1024
+                var chunkSizeMb = _fluentCommandLineParser.Object.BlockSizeMb < 1 ||
+                                  _fluentCommandLineParser.Object.BlockSizeMb > 1024
                     ? 512
-                    : _fluentCommandLineParser.Object.BlockSizeMB;
+                    : _fluentCommandLineParser.Object.BlockSizeMb;
                 var chunkSizeBytes = chunkSizeMb*1024*1024;
 
                 var fileSizeBytes = new FileInfo(file).Length;
@@ -468,11 +469,11 @@ namespace bstrings
                         bytesRemaining = fileSizeBytes;
                         chunkSizeBytes = chunkSizeMb*1024*1024;
                         offset = chunkSizeBytes - _fluentCommandLineParser.Object.MinimumLength*10*2;
-                            //move starting point backwards for our starting point
+                        //move starting point backwards for our starting point
                         chunkIndex = 0;
 
                         var boundaryChunkSize = _fluentCommandLineParser.Object.MinimumLength*10*2*2;
-                            //grab the same # of bytes on both sides of the boundary
+                        //grab the same # of bytes on both sides of the boundary
 
                         while (bytesRemaining > 0)
                         {
@@ -569,9 +570,8 @@ namespace bstrings
                     sw = new StreamWriter(_fluentCommandLineParser.Object.SaveTo, true);
                 }
 
-
-                List<string> FileStrings = null;
-                List<string> RegexStrings = null;
+                List<string> fileStrings = null;
+                List<string> regexStrings = null;
 
                 if (_fluentCommandLineParser.Object.StringFile.Length > 0 ||
                     _fluentCommandLineParser.Object.RegexFile.Length > 0)
@@ -580,10 +580,9 @@ namespace bstrings
                     {
                         if (File.Exists(_fluentCommandLineParser.Object.StringFile))
                         {
-                            FileStrings = File.ReadAllLines(_fluentCommandLineParser.Object.StringFile).ToList();
+                            fileStrings = File.ReadAllLines(_fluentCommandLineParser.Object.StringFile).ToList();
 
-                            AddHighlightingRules(FileStrings);
-
+                            AddHighlightingRules(fileStrings);
                         }
                         else
                         {
@@ -596,9 +595,9 @@ namespace bstrings
                     {
                         if (File.Exists(_fluentCommandLineParser.Object.RegexFile))
                         {
-                            RegexStrings = File.ReadAllLines(_fluentCommandLineParser.Object.RegexFile).ToList();
+                            regexStrings = File.ReadAllLines(_fluentCommandLineParser.Object.RegexFile).ToList();
 
-                            AddHighlightingRules(RegexStrings, true);
+                            AddHighlightingRules(regexStrings, true);
                         }
                         else
                         {
@@ -676,9 +675,9 @@ namespace bstrings
                     else if (_fluentCommandLineParser.Object.StringFile.Length > 0 ||
                              _fluentCommandLineParser.Object.RegexFile.Length > 0)
                     {
-                        if (FileStrings != null)
+                        if (fileStrings != null)
                         {
-                            foreach (var fileString in FileStrings)
+                            foreach (var fileString in fileStrings)
                             {
                                 if (fileString.Trim().Length == 0)
                                 {
@@ -698,9 +697,9 @@ namespace bstrings
                             }
                         }
 
-                        if (RegexStrings != null)
+                        if (regexStrings != null)
                         {
-                            foreach (var regString in RegexStrings)
+                            foreach (var regString in regexStrings)
                             {
                                 if (regString.Trim().Length == 0)
                                 {
@@ -852,50 +851,51 @@ namespace bstrings
 
         private static void SetupPatterns()
         {
-            _regExDesc.Add("guid", "\tFinds GUIDs");
-            _regExDesc.Add("usPhone", "\tFinds US phone numbers");
-            _regExDesc.Add("unc", "\tFinds UNC paths");
-            _regExDesc.Add("mac", "\tFinds MAC addresses");
-            _regExDesc.Add("ssn", "\tFinds US Social Security Numbers");
-            _regExDesc.Add("cc", "\tFinds credit card numbers");
+            RegExDesc.Add("guid", "\tFinds GUIDs");
+            RegExDesc.Add("usPhone", "\tFinds US phone numbers");
+            RegExDesc.Add("unc", "\tFinds UNC paths");
+            RegExDesc.Add("mac", "\tFinds MAC addresses");
+            RegExDesc.Add("ssn", "\tFinds US Social Security Numbers");
+            RegExDesc.Add("cc", "\tFinds credit card numbers");
 
-            _regExDesc.Add("ipv4", "\tFinds IP version 4 addresses");
-            _regExDesc.Add("ipv6", "\tFinds IP version 6 addresses");
-            _regExDesc.Add("email", "\tFinds embedded email addresses");
-            _regExDesc.Add("email_strict", "Finds email addresses using a more strict pattern");
-            _regExDesc.Add("zip", "\tFinds zip codes");
-            _regExDesc.Add("urlUser", "\tFinds usernames in URLs");
-            _regExDesc.Add("url3986", "\tFinds URLs according to RFC 3986");
-            _regExDesc.Add("xml", "\tFinds XML/HTML tags");
-            _regExDesc.Add("sid", "\tFinds Microsoft Security Identifiers (SID)");
-            _regExDesc.Add("win_path", "Finds Windows style paths (C:\folder1\folder2\file.txt)");
-            _regExDesc.Add("var_set", "\tFinds environment variables being set (OS=Windows_NT)");
-            _regExDesc.Add("reg_path", "Finds paths related to Registry hives");
-            _regExDesc.Add("b64", "\tFinds valid formatted base 64 strings");
+            RegExDesc.Add("ipv4", "\tFinds IP version 4 addresses");
+            RegExDesc.Add("ipv6", "\tFinds IP version 6 addresses");
+            RegExDesc.Add("email", "\tFinds embedded email addresses");
+            RegExDesc.Add("email_strict", "Finds email addresses using a more strict pattern");
+            RegExDesc.Add("zip", "\tFinds zip codes");
+            RegExDesc.Add("urlUser", "\tFinds usernames in URLs");
+            RegExDesc.Add("url3986", "\tFinds URLs according to RFC 3986");
+            RegExDesc.Add("xml", "\tFinds XML/HTML tags");
+            RegExDesc.Add("sid", "\tFinds Microsoft Security Identifiers (SID)");
+            RegExDesc.Add("win_path", "Finds Windows style paths (C:\folder1\folder2\file.txt)");
+            RegExDesc.Add("var_set", "\tFinds environment variables being set (OS=Windows_NT)");
+            RegExDesc.Add("reg_path", "Finds paths related to Registry hives");
+            RegExDesc.Add("b64", "\tFinds valid formatted base 64 strings");
 
-            _regExPatterns.Add("b64",
+            RegExPatterns.Add("b64",
                 @"^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$");
-            _regExPatterns.Add("reg_path", @"([a-z0-9]\\)*(software\\)|(sam\\)|(system\\)|(security\\)[a-z0-9\\]+");
-            _regExPatterns.Add("var_set", @"^[a-z_0-9]+=[\\/:\*\?<>|;\- _a-z0-9]+");
-            _regExPatterns.Add("win_path",
+            RegExPatterns.Add("reg_path", @"([a-z0-9]\\)*(software\\)|(sam\\)|(system\\)|(security\\)[a-z0-9\\]+");
+            RegExPatterns.Add("var_set", @"^[a-z_0-9]+=[\\/:\*\?<>|;\- _a-z0-9]+");
+            RegExPatterns.Add("win_path",
                 @"(?:""?[a-zA-Z]\:|\\\\[^\\\/\:\*\?\<\>\|]+\\[^\\\/\:\*\?\<\>\|]*)\\(?:[^\\\/\:\*\?\<\>\|]+\\)*\w([^\\\/\:\*\?\<\>\|])*");
-            _regExPatterns.Add("sid", @"^S-\d-\d+-(\d+-){1,14}\d+$");
-            _regExPatterns.Add("xml", @"\A<([A-Z][A-Z0-9]*)\b[^>]*>(.*?)</\1>\z");
-            _regExPatterns.Add("guid", @"\b[A-F0-9]{8}(?:-[A-F0-9]{4}){3}-[A-F0-9]{12}\b");
-            _regExPatterns.Add("usPhone", @"\(?\b[2-9][0-9]{2}\)?[-. ]?[2-9][0-9]{2}[-. ]?[0-9]{4}\b");
-            _regExPatterns.Add("unc", @"^\\\\(?<server>[a-z0-9 %._-]+)\\(?<share>[a-z0-9 $%._-]+)");
-            _regExPatterns.Add("mac", "\\b[0-9A-F]{2}([-:]?)(?:[0-9A-F]{2}\\1){4}[0-9A-F]{2}\\b");
-            _regExPatterns.Add("ssn", "\\b(?!000)(?!666)[0-8][0-9]{2}[- ](?!00)[0-9]{2}[- ](?!0000)[0-9]{4}\\b");
-            _regExPatterns.Add("cc",
+            RegExPatterns.Add("sid", @"^S-\d-\d+-(\d+-){1,14}\d+$");
+            RegExPatterns.Add("xml", @"\A<([A-Z][A-Z0-9]*)\b[^>]*>(.*?)</\1>\z");
+            RegExPatterns.Add("guid", @"\b[A-F0-9]{8}(?:-[A-F0-9]{4}){3}-[A-F0-9]{12}\b");
+            RegExPatterns.Add("usPhone", @"\(?\b[2-9][0-9]{2}\)?[-. ]?[2-9][0-9]{2}[-. ]?[0-9]{4}\b");
+            RegExPatterns.Add("unc", @"^\\\\(?<server>[a-z0-9 %._-]+)\\(?<share>[a-z0-9 $%._-]+)");
+            RegExPatterns.Add("mac", "\\b[0-9A-F]{2}([-:]?)(?:[0-9A-F]{2}\\1){4}[0-9A-F]{2}\\b");
+            RegExPatterns.Add("ssn", "\\b(?!000)(?!666)[0-8][0-9]{2}[- ](?!00)[0-9]{2}[- ](?!0000)[0-9]{4}\\b");
+            RegExPatterns.Add("cc",
                 "^(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|6(?:011|5[0-9][0-9])[0-9]{12}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|(?:2131|1800|35\\d{3})\\d{11})$");
-            _regExPatterns.Add("ipv4",
+            RegExPatterns.Add("ipv4",
                 @"\b(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\b");
-            _regExPatterns.Add("ipv6", @"(?<![:.\w])(?:[A-F0-9]{1,4}:){7}[A-F0-9]{1,4}(?![:.\w])");
-            _regExPatterns.Add("email_strict", @"\A\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,6}\b\z");
-            _regExPatterns.Add("email", @"[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?");
-            _regExPatterns.Add("zip", @"\A\b[0-9]{5}(?:-[0-9]{4})?\b\z");
-            _regExPatterns.Add("urlUser", @"^[a-z0-9+\-.]+://(?<user>[a-z0-9\-._~%!$&'()*+,;=]+)@");
-            _regExPatterns.Add("url3986", @"^
+            RegExPatterns.Add("ipv6", @"(?<![:.\w])(?:[A-F0-9]{1,4}:){7}[A-F0-9]{1,4}(?![:.\w])");
+            RegExPatterns.Add("email_strict", @"\A\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,6}\b\z");
+            RegExPatterns.Add("email",
+                @"[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?");
+            RegExPatterns.Add("zip", @"\A\b[0-9]{5}(?:-[0-9]{4})?\b\z");
+            RegExPatterns.Add("urlUser", @"^[a-z0-9+\-.]+://(?<user>[a-z0-9\-._~%!$&'()*+,;=]+)@");
+            RegExPatterns.Add("url3986", @"^
 		[a-z][a-z0-9+\-.]*://                       # Scheme
 		([a-z0-9\-._~%!$&'()*+,;=]+@)?              # User
 		(?<host>[a-z0-9\-._~%]+                     # Named host
@@ -922,12 +922,11 @@ namespace bstrings
                 fgColor = rule.ForegroundColor;
             }
 
-           // target.WordHighlightingRules.Clear();
+            // target.WordHighlightingRules.Clear();
 
             foreach (var word in words)
             {
-                var r = new ConsoleWordHighlightingRule();
-                r.IgnoreCase = true;
+                var r = new ConsoleWordHighlightingRule {IgnoreCase = true};
                 if (isRegEx)
                 {
                     r.Regex = word;
@@ -959,7 +958,7 @@ namespace bstrings
             var mi2 = $"{"{"}{minSize}{","}{maxString}{"}"}";
 
             var uniRange = _fluentCommandLineParser.Object.UnicodeRange; //"[\u0020-\u007E]";
-            var regUni = new Regex($"{uniRange}{mi2}",RegexOptions.Compiled);
+            var regUni = new Regex($"{uniRange}{mi2}", RegexOptions.Compiled);
             var uniString = Encoding.Unicode.GetString(bytes);
 
             var hits = new List<string>();
@@ -980,6 +979,7 @@ namespace bstrings
 
             return hits;
         }
+
 
         private static int ByteSearch(byte[] searchIn, byte[] searchBytes, int start = 0)
         {
@@ -1033,7 +1033,7 @@ namespace bstrings
             var mi2 = $"{"{"}{minSize}{","}{maxString}{"}"}";
 
             var ascRange = _fluentCommandLineParser.Object.AsciiRange; //"[\x20-\x7E]";
-            var regAsc = new Regex($"{ascRange}{mi2}",RegexOptions.Compiled);
+            var regAsc = new Regex($"{ascRange}{mi2}", RegexOptions.Compiled);
             var ascString = Encoding.GetEncoding(_fluentCommandLineParser.Object.CodePage).GetString(bytes);
 
             var hits = new List<string>();
@@ -1042,9 +1042,9 @@ namespace bstrings
             {
                 if (withOffsets)
                 {
-                    //TODO can we do better? http://stackoverflow.com/questions/283456/byte-array-pattern-search/283815#283815
                     var matchBytes = Encoding.GetEncoding(_fluentCommandLineParser.Object.CodePage)
                         .GetBytes(match.Value);
+
                     var pos = ByteSearch(bytes, matchBytes, match.Index);
 
                     var actualOffset = currentOffset + pos;
@@ -1098,7 +1098,7 @@ namespace bstrings
         public int MinimumLength { get; set; } = 3;
         public int MaximumLength { get; set; } = -1;
         public int CodePage { get; set; } = 1252;
-        public int BlockSizeMB { get; set; } = 512;
+        public int BlockSizeMb { get; set; } = 512;
         public bool ShowOffset { get; set; } = false;
         public bool SortLength { get; set; } = false;
         public bool SortAlpha { get; set; } = false;
