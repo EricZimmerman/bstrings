@@ -959,7 +959,7 @@ namespace bstrings
             var mi2 = $"{"{"}{minSize}{","}{maxString}{"}"}";
 
             var uniRange = _fluentCommandLineParser.Object.UnicodeRange; //"[\u0020-\u007E]";
-            var regUni = new Regex($"{uniRange}{mi2}");
+            var regUni = new Regex($"{uniRange}{mi2}",RegexOptions.Compiled);
             var uniString = Encoding.Unicode.GetString(bytes);
 
             var hits = new List<string>();
@@ -1033,12 +1033,12 @@ namespace bstrings
             var mi2 = $"{"{"}{minSize}{","}{maxString}{"}"}";
 
             var ascRange = _fluentCommandLineParser.Object.AsciiRange; //"[\x20-\x7E]";
-            var regUni = new Regex($"{ascRange}{mi2}");
-            var utfString = Encoding.GetEncoding(_fluentCommandLineParser.Object.CodePage).GetString(bytes);
+            var regAsc = new Regex($"{ascRange}{mi2}",RegexOptions.Compiled);
+            var ascString = Encoding.GetEncoding(_fluentCommandLineParser.Object.CodePage).GetString(bytes);
 
             var hits = new List<string>();
 
-            foreach (Match match in regUni.Matches(utfString))
+            foreach (Match match in regAsc.Matches(ascString))
             {
                 if (withOffsets)
                 {
