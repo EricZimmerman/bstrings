@@ -618,7 +618,7 @@ namespace bstrings
                     var hitoffset = "";
                     if (_fluentCommandLineParser.Object.ShowOffset)
                     {
-                        hitoffset = hit.Split('\t').Last();
+                        hitoffset = $"~{hit.Split('\t').Last()}";
                     }
 
                     if (_fluentCommandLineParser.Object.LookForString.Length > 0 ||
@@ -651,7 +651,7 @@ namespace bstrings
                                 {
                                     foreach (var match in reg.Matches(hit))
                                     {
-                                        _logger.Info($"{match}\t~{hitoffset}");
+                                        _logger.Info($"{match}\t{hitoffset}");
                                     }
                                 }
                                 else
@@ -664,7 +664,7 @@ namespace bstrings
                             {
                                 foreach (var match in reg.Matches(hit))
                                 {
-                                    sw?.WriteLine($"{match}\t~{hitoffset}");
+                                    sw?.WriteLine($"{match}\t{hitoffset}");
                                 }
                             }
                             else
@@ -724,7 +724,7 @@ namespace bstrings
                                         {
                                             foreach (var match in reg1.Matches(hit))
                                             {
-                                                _logger.Info($"{match}\t~{hitoffset}");
+                                                _logger.Info($"{match}\t{hitoffset}");
                                             }
                                         }
                                         else
@@ -737,7 +737,7 @@ namespace bstrings
                                     {
                                         foreach (var match in reg1.Matches(hit))
                                         {
-                                            sw?.WriteLine($"{match}\t~{hitoffset}");
+                                            sw?.WriteLine($"{match}\t{hitoffset}");
                                         }
                                     }
                                     else
