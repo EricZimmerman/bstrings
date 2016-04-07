@@ -106,23 +106,23 @@ namespace bstrings
             _fluentCommandLineParser.Setup(arg => arg.LookForString)
                 .As("ls")
                 .SetDefault(string.Empty)
-                .WithDescription("String to look for. When set, only matching strings are returned.");
+                .WithDescription("String to look for. When set, only matching strings are returned");
 
             _fluentCommandLineParser.Setup(arg => arg.LookForRegex)
                 .As("lr")
                 .SetDefault(string.Empty)
-                .WithDescription("Regex to look for. When set, only strings matching the regex are returned.");
+                .WithDescription("Regex to look for. When set, only strings matching the regex are returned");
 
             _fluentCommandLineParser.Setup(arg => arg.StringFile)
                 .As("fs")
                 .SetDefault(string.Empty)
-                .WithDescription("File containing strings to look for. When set, only matching strings are returned.");
+                .WithDescription("File containing strings to look for. When set, only matching strings are returned");
 
             _fluentCommandLineParser.Setup(arg => arg.RegexFile)
                 .As("fr")
                 .SetDefault(string.Empty)
                 .WithDescription(
-                    "File containing regex patterns to look for. When set, only strings matching regex patterns are returned.\r\n");
+                    "File containing regex patterns to look for. When set, only strings matching regex patterns are returned\r\n");
 
 
             _fluentCommandLineParser.Setup(arg => arg.AsciiRange)
@@ -294,6 +294,46 @@ namespace bstrings
             double globalTimespan = 0;
             var withBoundaryHits = false;
 
+            if (_fluentCommandLineParser.Object.SaveTo.Length > 0)
+            {
+                var dir = Path.GetDirectoryName(_fluentCommandLineParser.Object.SaveTo);
+
+                if (dir != null && Directory.Exists(dir) == false)
+                {
+                    try
+                    {
+                        Directory.CreateDirectory(dir);
+                    }
+                    catch (Exception)
+                    {
+                        _logger.Warn(
+                            $"Invalid path: '{_fluentCommandLineParser.Object.SaveTo}'. Results will not be saved to a file.");
+                        _logger.Info("");
+                        _fluentCommandLineParser.Object.SaveTo = string.Empty;
+                    }
+                }
+                else
+                {
+                    if (dir == null)
+                    {
+                        _logger.Warn($"Invalid path: '{_fluentCommandLineParser.Object.SaveTo}");
+                        _fluentCommandLineParser.Object.SaveTo = string.Empty;
+                    }
+                }
+
+                if (_fluentCommandLineParser.Object.SaveTo.Length > 0 && !_fluentCommandLineParser.Object.Quiet)
+                {
+                    _logger.Info($"Saving hits to '{_fluentCommandLineParser.Object.SaveTo}'");
+                    _logger.Info("");
+                }
+
+                if (_fluentCommandLineParser.Object.SaveTo.Length > 0)
+                {
+                    sw = new StreamWriter(_fluentCommandLineParser.Object.SaveTo, true);
+                }
+            }
+
+
             foreach (var file in files)
             {
                 if (File.Exists(file) == false)
@@ -318,53 +358,6 @@ namespace bstrings
                 {
                     _logger.Info($"Searching via RegEx pattern: {regPattern}");
                     _logger.Info("");
-                }
-
-                Regex reg;
-
-                try
-                {
-                    reg = new Regex(regPattern,
-                        RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error($"Error setting up regular expression: {ex.Message}");
-                    return;
-                }
-
-                if (_fluentCommandLineParser.Object.SaveTo.Length > 0)
-                {
-                    var dir = Path.GetDirectoryName(_fluentCommandLineParser.Object.SaveTo);
-
-                    if (dir != null && Directory.Exists(dir) == false)
-                    {
-                        try
-                        {
-                            Directory.CreateDirectory(dir);
-                        }
-                        catch (Exception)
-                        {
-                            _logger.Warn(
-                                $"Invalid path: '{_fluentCommandLineParser.Object.SaveTo}'. Results will not be saved to a file.");
-                            _logger.Info("");
-                            _fluentCommandLineParser.Object.SaveTo = string.Empty;
-                        }
-                    }
-                    else
-                    {
-                        if (dir == null)
-                        {
-                            _logger.Warn($"Invalid path: '{_fluentCommandLineParser.Object.SaveTo}");
-                            _fluentCommandLineParser.Object.SaveTo = string.Empty;
-                        }
-                    }
-
-                    if (_fluentCommandLineParser.Object.SaveTo.Length > 0 && !_fluentCommandLineParser.Object.Quiet)
-                    {
-                        _logger.Info($"Saving hits to '{_fluentCommandLineParser.Object.SaveTo}'");
-                        _logger.Info("");
-                    }
                 }
 
                 var minLength = 3;
@@ -463,7 +456,6 @@ namespace bstrings
                         {
                             _logger.Info(
                                 "Primary search complete. Looking for strings across chunk boundaries...");
-                            _logger.Info("");
                         }
 
                         bytesRemaining = fileSizeBytes;
@@ -537,67 +529,59 @@ namespace bstrings
 
                 if (!_fluentCommandLineParser.Object.Quiet)
                 {
+                    _logger.Info("Search complete.");
                     _logger.Info("");
                 }
 
                 if (_fluentCommandLineParser.Object.SortAlpha)
                 {
+                    _logger.Info("Sorting alphabetically...");
+                    _logger.Info("");
                     var tempList = hits.ToList();
                     tempList.Sort();
                     hits = new HashSet<string>(tempList);
                 }
                 else if (_fluentCommandLineParser.Object.SortLength)
                 {
+                    _logger.Info("Sorting by length...");
+                    _logger.Info("");
                     var tempList = SortByLength(hits.ToList()).ToList();
                     hits = new HashSet<string>(tempList);
                 }
 
+                var fileStrings = new HashSet<string>();
+                var regexStrings = new HashSet<string>();
+
                 //set up highlighting
-                var words = new HashSet<string>();
                 if (_fluentCommandLineParser.Object.LookForString.Length > 0)
                 {
-                    words.Add(_fluentCommandLineParser.Object.LookForString);
+                    fileStrings.Add(_fluentCommandLineParser.Object.LookForString);
                 }
-                else if (_fluentCommandLineParser.Object.LookForRegex.Length > 0)
+
+                if (_fluentCommandLineParser.Object.LookForRegex.Length > 0)
                 {
-                    words.Add(regPattern);
+                    regexStrings.Add(regPattern);
                 }
 
-                AddHighlightingRules(words.ToList(), regPattern.Length > 0);
-
-                if (_fluentCommandLineParser.Object.SaveTo.Length > 0)
-                {
-                    sw = new StreamWriter(_fluentCommandLineParser.Object.SaveTo, true);
-                }
-
-                List<string> fileStrings = null;
-                List<string> regexStrings = null;
-
-                if (_fluentCommandLineParser.Object.StringFile.Length > 0 ||
-                    _fluentCommandLineParser.Object.RegexFile.Length > 0)
+                if (_fluentCommandLineParser.Object.StringFile.Length > 0 || _fluentCommandLineParser.Object.RegexFile.Length > 0)
                 {
                     if (_fluentCommandLineParser.Object.StringFile.Length > 0)
                     {
                         if (File.Exists(_fluentCommandLineParser.Object.StringFile))
                         {
-                            fileStrings = File.ReadAllLines(_fluentCommandLineParser.Object.StringFile).ToList();
-
-                            AddHighlightingRules(fileStrings);
+                            fileStrings.UnionWith(new HashSet<string>( File.ReadAllLines(_fluentCommandLineParser.Object.StringFile)));
                         }
                         else
                         {
                             _logger.Error($"Strings file '{_fluentCommandLineParser.Object.StringFile}' not found.");
                         }
                     }
-
-
+                    
                     if (_fluentCommandLineParser.Object.RegexFile.Length > 0)
                     {
                         if (File.Exists(_fluentCommandLineParser.Object.RegexFile))
                         {
-                            regexStrings = File.ReadAllLines(_fluentCommandLineParser.Object.RegexFile).ToList();
-
-                            AddHighlightingRules(regexStrings, true);
+                            regexStrings.UnionWith(new HashSet<string>(File.ReadAllLines(_fluentCommandLineParser.Object.RegexFile)));
                         }
                         else
                         {
@@ -606,6 +590,18 @@ namespace bstrings
                     }
                 }
 
+                AddHighlightingRules(fileStrings.ToList());
+
+                if (_fluentCommandLineParser.Object.RegexOnly == false)
+                {
+                    AddHighlightingRules(regexStrings.ToList(), true);
+                }
+
+                _logger.Info("Processing strings...");
+                if (!_fluentCommandLineParser.Object.Quiet)
+                {
+                    _logger.Info("");
+                }
 
                 foreach (var hit in hits)
                 {
@@ -614,80 +610,69 @@ namespace bstrings
                         continue;
                     }
 
-                    var hitoffset = "";
-                    if (_fluentCommandLineParser.Object.ShowOffset)
+                    if (fileStrings.Count > 0 || regexStrings.Count > 0)
                     {
-                        hitoffset = $"~{hit.Split('\t').Last()}";
-                    }
-
-                    if (_fluentCommandLineParser.Object.LookForString.Length > 0 ||
-                        _fluentCommandLineParser.Object.LookForRegex.Length > 0)
-                    {
-                        if (_fluentCommandLineParser.Object.LookForString.Length > 0 &&
-                            hit.IndexOf(_fluentCommandLineParser.Object.LookForString,
-                                StringComparison.InvariantCultureIgnoreCase) >= 0)
+                        foreach (var fileString in fileStrings)
                         {
+                            if (fileString.Trim().Length == 0)
+                            {
+                                continue;
+                            }
+                            if (hit.IndexOf(fileString, StringComparison.InvariantCultureIgnoreCase) < 0)
+                            {
+                                continue;
+                            }
+
                             counter += 1;
 
-                            if (!_fluentCommandLineParser.Object.QuietQuiet)
+                            if (_fluentCommandLineParser.Object.QuietQuiet == false)
                             {
                                 _logger.Info(hit);
                             }
 
                             sw?.WriteLine(hit);
                         }
-                        else if (_fluentCommandLineParser.Object.LookForRegex.Length > 0)
+
+                        var hitoffset = "";
+                        if (_fluentCommandLineParser.Object.ShowOffset)
                         {
-                            if (!reg.IsMatch(hit))
+                            hitoffset = $"~{hit.Split('\t').Last()}";
+                        }
+
+                        foreach (var regString in regexStrings)
+                        {
+                            if (regString.Trim().Length == 0)
                             {
                                 continue;
                             }
-                            counter += 1;
 
-                            if (!_fluentCommandLineParser.Object.QuietQuiet)
+                            try
                             {
+                                var reg1 = new Regex(regString,
+                                    RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
+
+                                if (reg1.IsMatch(hit) == false)
+                                {
+                                    continue;
+                                }
+
+                                counter += 1;
+
                                 if (_fluentCommandLineParser.Object.RegexOnly)
                                 {
-                                    foreach (var match in reg.Matches(hit))
+                                    foreach (var match in reg1.Matches(hit))
                                     {
-                                        _logger.Info($"{match}\t{hitoffset}");
+                                        if (_fluentCommandLineParser.Object.QuietQuiet == false)
+                                        {
+                                            _logger.Info($"{match}\t{hitoffset}");
+                                        }
+
+                                        sw?.WriteLine($"{match}\t{hitoffset}");
                                     }
                                 }
                                 else
                                 {
-                                    _logger.Info(hit);
-                                }
-                            }
-
-                            if (sw != null && _fluentCommandLineParser.Object.RegexOnly)
-                            {
-                                foreach (var match in reg.Matches(hit))
-                                {
-                                    sw?.WriteLine($"{match}\t{hitoffset}");
-                                }
-                            }
-                            else
-                            {
-                                sw?.WriteLine(hit);
-                            }
-                        }
-                    }
-                    else if (_fluentCommandLineParser.Object.StringFile.Length > 0 ||
-                             _fluentCommandLineParser.Object.RegexFile.Length > 0)
-                    {
-                        if (fileStrings != null)
-                        {
-                            foreach (var fileString in fileStrings)
-                            {
-                                if (fileString.Trim().Length == 0)
-                                {
-                                    continue;
-                                }
-                                if (hit.IndexOf(fileString, StringComparison.InvariantCultureIgnoreCase) >= 0)
-                                {
-                                    counter += 1;
-
-                                    if (!_fluentCommandLineParser.Object.QuietQuiet)
+                                    if (_fluentCommandLineParser.Object.QuietQuiet == false)
                                     {
                                         _logger.Info(hit);
                                     }
@@ -695,104 +680,56 @@ namespace bstrings
                                     sw?.WriteLine(hit);
                                 }
                             }
-                        }
-
-                        if (regexStrings != null)
-                        {
-                            foreach (var regString in regexStrings)
+                            catch (Exception ex)
                             {
-                                if (regString.Trim().Length == 0)
-                                {
-                                    continue;
-                                }
-
-                                try
-                                {
-                                    var reg1 = new Regex(regString,
-                                        RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
-
-                                    if (!reg1.IsMatch(hit))
-                                    {
-                                        continue;
-                                    }
-                                    counter += 1;
-
-                                    if (!_fluentCommandLineParser.Object.QuietQuiet)
-                                    {
-                                        if (_fluentCommandLineParser.Object.RegexOnly)
-                                        {
-                                            foreach (var match in reg1.Matches(hit))
-                                            {
-                                                _logger.Info($"{match}\t{hitoffset}");
-                                            }
-                                        }
-                                        else
-                                        {
-                                            _logger.Info(hit);
-                                        }
-                                    }
-
-                                    if (sw != null && _fluentCommandLineParser.Object.RegexOnly)
-                                    {
-                                        foreach (var match in reg1.Matches(hit))
-                                        {
-                                            sw?.WriteLine($"{match}\t{hitoffset}");
-                                        }
-                                    }
-                                    else
-                                    {
-                                        sw?.WriteLine(hit);
-                                    }
-                                }
-                                catch (Exception ex)
-                                {
-                                    _logger.Error($"Error setting up regular expression '{regString}': {ex.Message}");
-                                }
+                                _logger.Error($"Error setting up regular expression '{regString}': {ex.Message}");
                             }
                         }
                     }
-
                     else
                     {
+                        //dump all strings
                         counter += 1;
-
-                        if (!_fluentCommandLineParser.Object.QuietQuiet)
+                        
+                        if (_fluentCommandLineParser.Object.QuietQuiet == false)
                         {
                             _logger.Info(hit);
                         }
-
+                        
                         sw?.WriteLine(hit);
                     }
                 }
-                if (sw != null)
+
+                if (_fluentCommandLineParser.Object.Quiet)
                 {
-                    sw.Flush();
-                    sw.Close();
+                    continue;
                 }
 
-                if (!_fluentCommandLineParser.Object.Quiet)
-                {
-                    var suffix = counter == 1 ? "" : "s";
+                var suffix = counter == 1 ? "" : "s";
 
+                _logger.Info("");
+
+                if (withBoundaryHits)
+                {
+                    _logger.Info("** Strings prefixed with 2 spaces are hits found across chunk boundaries **");
                     _logger.Info("");
-
-                    if (withBoundaryHits)
-                    {
-                        _logger.Info("** Strings prefixed with 2 spaces are hits found across chunk boundaries **");
-                        _logger.Info("");
-                    }
-
-                    _logger.Info(
-                        $"Found {counter:N0} string{suffix} in {_sw.Elapsed.TotalSeconds:N3} seconds. Average strings/sec: {hits.Count/_sw.Elapsed.TotalSeconds:N0}");
-                    globalCounter += counter;
-                    globalHits += hits.Count;
-                    globalTimespan += _sw.Elapsed.TotalSeconds;
-                    if (files.Count > 1)
-                    {
-                        _logger.Info(
-                            "-------------------------------------------------------------------------------------\r\n");
-                    }
                 }
+
+                _logger.Info(
+                    $"Found {counter:N0} string{suffix} in {_sw.Elapsed.TotalSeconds:N3} seconds. Average strings/sec: {hits.Count/_sw.Elapsed.TotalSeconds:N0}");
+                globalCounter += counter;
+                globalHits += hits.Count;
+                globalTimespan += _sw.Elapsed.TotalSeconds;
+                if (files.Count > 1)
+                {
+                    _logger.Info(
+                        "-------------------------------------------------------------------------------------\r\n");
+                }
+            }
+            if (sw != null)
+            {
+                sw.Flush();
+                sw.Close();
             }
 
             if (!_fluentCommandLineParser.Object.Quiet && files.Count > 1)
@@ -861,7 +798,6 @@ namespace bstrings
             RegExDesc.Add("ipv4", "\tFinds IP version 4 addresses");
             RegExDesc.Add("ipv6", "\tFinds IP version 6 addresses");
             RegExDesc.Add("email", "\tFinds embedded email addresses");
-            RegExDesc.Add("email_strict", "Finds email addresses using a more strict pattern");
             RegExDesc.Add("zip", "\tFinds zip codes");
             RegExDesc.Add("urlUser", "\tFinds usernames in URLs");
             RegExDesc.Add("url3986", "\tFinds URLs according to RFC 3986");
@@ -885,14 +821,12 @@ namespace bstrings
             RegExPatterns.Add("unc", @"^\\\\(?<server>[a-z0-9 %._-]+)\\(?<share>[a-z0-9 $%._-]+)");
             RegExPatterns.Add("mac", "\\b[0-9A-F]{2}([-:]?)(?:[0-9A-F]{2}\\1){4}[0-9A-F]{2}\\b");
             RegExPatterns.Add("ssn", "\\b(?!000)(?!666)[0-8][0-9]{2}[- ](?!00)[0-9]{2}[- ](?!0000)[0-9]{4}\\b");
-            RegExPatterns.Add("cc",
-                "^(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|6(?:011|5[0-9][0-9])[0-9]{12}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|(?:2131|1800|35\\d{3})\\d{11})$");
-            RegExPatterns.Add("ipv4",
-                @"\b(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\b");
+           // RegExPatterns.Add("cc","^(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|6(?:011|5[0-9][0-9])[0-9]{12}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|(?:2131|1800|35\\d{3})\\d{11})$");
+            RegExPatterns.Add("cc", @"^[ -]*(?:4[ -]*(?:\d[ -]*){11}(?:(?:\d[ -]*){3})?\d|5[ -]*[1-5](?:[ -]*[0-9]){14}|6[ -]*(?:0[ -]*1[ -]*1|5[ -]*\d[ -]*\d)(?:[ -]*[0-9]){12}|3[ -]*[47](?:[ -]*[0-9]){13}|3[ -]*(?:0[ -]*[0-5]|[68][ -]*[0-9])(?:[ -]*[0-9]){11}|(?:2[ -]*1[ -]*3[ -]*1|1[ -]*8[ -]*0[ -]*0|3[ -]*5(?:[ -]*[0-9]){3})(?:[ -]*[0-9]){11})[ -]*$");
+            RegExPatterns.Add("ipv4",@"\b(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\b");
             RegExPatterns.Add("ipv6", @"(?<![:.\w])(?:[A-F0-9]{1,4}:){7}[A-F0-9]{1,4}(?![:.\w])");
-            RegExPatterns.Add("email_strict", @"\A\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,6}\b\z");
-            RegExPatterns.Add("email",
-                @"[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?");
+   //         RegExPatterns.Add("email",@"[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?");
+            RegExPatterns.Add("email", @"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,6}\b");
             RegExPatterns.Add("zip", @"\A\b[0-9]{5}(?:-[0-9]{4})?\b\z");
             RegExPatterns.Add("urlUser", @"^[a-z0-9+\-.]+://(?<user>[a-z0-9\-._~%!$&'()*+,;=]+)@");
             RegExPatterns.Add("url3986", @"^
@@ -921,8 +855,6 @@ namespace bstrings
                 bgColor = rule.BackgroundColor;
                 fgColor = rule.ForegroundColor;
             }
-
-            // target.WordHighlightingRules.Clear();
 
             foreach (var word in words)
             {
@@ -957,7 +889,7 @@ namespace bstrings
             var maxString = maxSize == -1 ? "" : maxSize.ToString();
             var mi2 = $"{"{"}{minSize}{","}{maxString}{"}"}";
 
-            var uniRange = _fluentCommandLineParser.Object.UnicodeRange; //"[\u0020-\u007E]";
+            var uniRange = _fluentCommandLineParser.Object.UnicodeRange; 
             var regUni = new Regex($"{uniRange}{mi2}", RegexOptions.Compiled);
             var uniString = Encoding.Unicode.GetString(bytes);
 
@@ -1032,7 +964,7 @@ namespace bstrings
             var maxString = maxSize == -1 ? "" : maxSize.ToString();
             var mi2 = $"{"{"}{minSize}{","}{maxString}{"}"}";
 
-            var ascRange = _fluentCommandLineParser.Object.AsciiRange; //"[\x20-\x7E]";
+            var ascRange = _fluentCommandLineParser.Object.AsciiRange; 
             var regAsc = new Regex($"{ascRange}{mi2}", RegexOptions.Compiled);
             var ascString = Encoding.GetEncoding(_fluentCommandLineParser.Object.CodePage).GetString(bytes);
 
@@ -1066,7 +998,7 @@ namespace bstrings
             var config = new LoggingConfiguration();
             var loglevel = LogLevel.Info;
 
-            var layout = @"${message}";
+            const string layout = @"${message}";
 
             var consoleTarget = new ColoredConsoleTarget();
 
