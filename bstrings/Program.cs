@@ -597,9 +597,10 @@ namespace bstrings
                     AddHighlightingRules(regexStrings.ToList(), true);
                 }
 
-                _logger.Info("Processing strings...");
+              
                 if (!_fluentCommandLineParser.Object.Quiet)
                 {
+                    _logger.Info("Processing strings...");
                     _logger.Info("");
                 }
 
