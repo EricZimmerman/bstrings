@@ -129,7 +129,7 @@ namespace bstrings
                 .As("ar")
                 .SetDefault("[\x20-\x7E]")
                 .WithDescription(
-                    @"Range of characters to search for in 'Codepage' strings. Specify as a range of characters in hex format and enclose in quotes. Default is [\x20 -\x7E]");
+                    @"Range of characters to search for in 'Code page' strings. Specify as a range of characters in hex format and enclose in quotes. Default is [\x20 -\x7E]");
 
             _fluentCommandLineParser.Setup(arg => arg.UnicodeRange)
                 .As("ur")
@@ -141,7 +141,7 @@ namespace bstrings
                 .As("cp")
                 .SetDefault(1252)
                 .WithDescription(
-                    "Codepage to use. Default is 1252. Use the Identifier value for code pages at https://goo.gl/ig6DxW");
+                    "Code page to use. Default is 1252. Use the Identifier value for code pages at https://goo.gl/ig6DxW");
 
             _fluentCommandLineParser.Setup(arg => arg.FileMask)
                 .As("mask")
@@ -198,7 +198,7 @@ namespace bstrings
 
             if (_fluentCommandLineParser.Object.GetPatterns)
             {
-                _logger.Info("Name \t\tDescription");
+                _logger.Warn("Name \t\tDescription");
                 foreach (var regExPattern in RegExPatterns)
                 {
                     var desc = RegExDesc[regExPattern.Key];
@@ -206,7 +206,7 @@ namespace bstrings
                 }
 
                 _logger.Info("");
-                _logger.Info("To use a built in pattern, supply the Name to the --lr switch");
+                _logger.Info("To use a built in pattern, supply the Name to the --lr switch\r\n");
 
                 return;
             }
@@ -803,7 +803,7 @@ namespace bstrings
             RegExDesc.Add("url3986", "\tFinds URLs according to RFC 3986");
             RegExDesc.Add("xml", "\tFinds XML/HTML tags");
             RegExDesc.Add("sid", "\tFinds Microsoft Security Identifiers (SID)");
-            RegExDesc.Add("win_path", "Finds Windows style paths (C:\folder1\folder2\file.txt)");
+            RegExDesc.Add("win_path", @"Finds Windows style paths (C:\folder1\folder2\file.txt)");
             RegExDesc.Add("var_set", "\tFinds environment variables being set (OS=Windows_NT)");
             RegExDesc.Add("reg_path", "Finds paths related to Registry hives");
             RegExDesc.Add("b64", "\tFinds valid formatted base 64 strings");
