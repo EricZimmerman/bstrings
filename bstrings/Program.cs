@@ -10,7 +10,6 @@ using System.Text.RegularExpressions;
 using Alphaleonis.Win32.Filesystem;
 using Fclp;
 using Fclp.Internals.Extensions;
-using Microsoft.Win32;
 using NLog;
 using NLog.Config;
 using NLog.Targets;
@@ -29,18 +28,7 @@ namespace bstrings
         private static readonly Dictionary<string, string> RegExDesc = new Dictionary<string, string>();
         private static FluentCommandLineParser<ApplicationArguments> _fluentCommandLineParser;
 
-        private static bool CheckForDotnet46()
-        {
-            using (
-                var ndpKey =
-                    RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry32)
-                        .OpenSubKey("SOFTWARE\\Microsoft\\NET Framework Setup\\NDP\\v4\\Full\\"))
-            {
-                var releaseKey = Convert.ToInt32(ndpKey?.GetValue("Release"));
-
-                return releaseKey >= 393295;
-            }
-        }
+     
 
         private static void Main(string[] args)
         {
@@ -48,12 +36,6 @@ namespace bstrings
             SetupPatterns();
 
             _logger = LogManager.GetCurrentClassLogger();
-
-            if (!CheckForDotnet46())
-            {
-                _logger.Warn(".net 4.6 not detected. Please install .net 4.6 and try again.");
-                return;
-            }
 
             _fluentCommandLineParser = new FluentCommandLineParser<ApplicationArguments>
             {
@@ -198,8 +180,10 @@ namespace bstrings
 
             if (_fluentCommandLineParser.Object.GetPatterns)
             {
+                
+
                 _logger.Warn("Name \t\tDescription");
-                foreach (var regExPattern in RegExPatterns)
+                foreach (var regExPattern in RegExPatterns.OrderBy(t=>t.Key))
                 {
                     var desc = RegExDesc[regExPattern.Key];
                     _logger.Info($"{regExPattern.Key}\t{desc}");
@@ -746,7 +730,7 @@ namespace bstrings
         private static string GetSizeReadable(long i)
         {
             var sign = i < 0 ? "-" : "";
-            double readable = i < 0 ? -i : i;
+            double readable;
             string suffix;
             if (i >= 0x1000000000000000) // Exabyte
             {
@@ -808,9 +792,13 @@ namespace bstrings
             RegExDesc.Add("var_set", "\tFinds environment variables being set (OS=Windows_NT)");
             RegExDesc.Add("reg_path", "Finds paths related to Registry hives");
             RegExDesc.Add("b64", "\tFinds valid formatted base 64 strings");
+            RegExDesc.Add("bitlocker", "Finds Bitlocker recovery keys");
 
             RegExPatterns.Add("b64",
                 @"^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$");
+
+            RegExPatterns.Add("bitlocker", @"[0-9]{6}?-[0-9]{6}-[0-9]{6}-[0-9]{6}-[0-9]{6}-[0-9]{6}-[0-9]{6}-[0-9]{6}");
+
             RegExPatterns.Add("reg_path", @"([a-z0-9]\\)*(software\\)|(sam\\)|(system\\)|(security\\)[a-z0-9\\]+");
             RegExPatterns.Add("var_set", @"^[a-z_0-9]+=[\\/:\*\?<>|;\- _a-z0-9]+");
             RegExPatterns.Add("win_path",
@@ -917,7 +905,6 @@ namespace bstrings
         private static int ByteSearch(byte[] searchIn, byte[] searchBytes, int start = 0)
         {
             var found = -1;
-            var matched = false;
             //only look at this if we have a populated search array and search bytes with a sensible start
             if (searchIn.Length > 0 && searchBytes.Length > 0 && start <= searchIn.Length - searchBytes.Length &&
                 searchIn.Length >= searchBytes.Length)
@@ -931,7 +918,7 @@ namespace bstrings
                         if (searchIn.Length > 1)
                         {
                             //multiple bytes to be searched we have to compare byte by byte
-                            matched = true;
+                            var matched = true;
                             for (var y = 1; y <= searchBytes.Length - 1; y++)
                             {
                                 if (searchIn[i + y] != searchBytes[y])
