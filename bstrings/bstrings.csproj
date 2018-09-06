@@ -42,14 +42,29 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="AlphaFS, Version=2.2.0.0, Culture=neutral, PublicKeyToken=4d31a58f7d7ad5c9, processorArchitecture=MSIL">
-      <HintPath>..\packages\AlphaFS.2.2.1\lib\net452\AlphaFS.dll</HintPath>
+      <HintPath>..\packages\AlphaFS.2.2.6\lib\net452\AlphaFS.dll</HintPath>
+    </Reference>
+    <Reference Include="DeviceIOControlLib, Version=0.1.4.0, Culture=neutral, PublicKeyToken=194e86a1dcd77098, processorArchitecture=MSIL">
+      <HintPath>..\packages\DeviceIOControlLib.0.1.4\lib\net40\DeviceIOControlLib.dll</HintPath>
+    </Reference>
+    <Reference Include="DiscUtils.Core, Version=0.13.0.0, Culture=neutral, PublicKeyToken=5fa5b410cc9c6289, processorArchitecture=MSIL">
+      <HintPath>..\packages\DiscUtils.Core.0.13.0-alpha\lib\net45\DiscUtils.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="DiscUtils.Ntfs, Version=0.13.0.0, Culture=neutral, PublicKeyToken=5fa5b410cc9c6289, processorArchitecture=MSIL">
+      <HintPath>..\packages\DiscUtils.Ntfs.0.13.0-alpha\lib\net45\DiscUtils.Ntfs.dll</HintPath>
+    </Reference>
+    <Reference Include="DiscUtils.Streams, Version=0.13.0.0, Culture=neutral, PublicKeyToken=5fa5b410cc9c6289, processorArchitecture=MSIL">
+      <HintPath>..\packages\DiscUtils.Streams.0.13.0-alpha\lib\net45\DiscUtils.Streams.dll</HintPath>
     </Reference>
     <Reference Include="FluentCommandLineParser, Version=1.4.3.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\FluentCommandLineParser.1.4.3\lib\net35\FluentCommandLineParser.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="NLog, Version=4.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
-      <HintPath>..\packages\NLog.4.5.5\lib\net45\NLog.dll</HintPath>
+      <HintPath>..\packages\NLog.4.5.9\lib\net45\NLog.dll</HintPath>
+    </Reference>
+    <Reference Include="RawDiskLib, Version=0.1.4.0, Culture=neutral, PublicKeyToken=1e91a7ce501218a4, processorArchitecture=MSIL">
+      <HintPath>..\packages\RawDiskLib.0.1.4\lib\net40\RawDiskLib.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />

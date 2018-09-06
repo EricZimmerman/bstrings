@@ -8,11 +8,15 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using Alphaleonis.Win32.Filesystem;
+using DiscUtils;
+using DiscUtils.Ntfs;
+using DiscUtils.Streams;
 using Fclp;
 using Fclp.Internals.Extensions;
 using NLog;
 using NLog.Config;
 using NLog.Targets;
+using RawDiskLib;
 using Directory = Alphaleonis.Win32.Filesystem.Directory;
 using File = Alphaleonis.Win32.Filesystem.File;
 using FileInfo = Alphaleonis.Win32.Filesystem.FileInfo;
@@ -380,12 +384,31 @@ namespace bstrings
 
                 try
                 {
-                    using (
-                        var mmf =
-                            MemoryMappedFile.CreateFromFile(
-                                File.Open(File.GetFileSystemEntryInfo(file).LongFullPath, FileMode.Open, FileAccess.Read,
-                                    FileShare.Read, PathFormat.LongFullPath), "source", 0, MemoryMappedFileAccess.Read,
-                                HandleInheritability.None, false))
+                    MappedStream ms = null;
+
+                    try
+                    {
+                       var fs =
+                            File.Open(File.GetFileSystemEntryInfo(file).LongFullPath, FileMode.Open, FileAccess.Read,
+                                FileShare.Read, PathFormat.LongFullPath);
+
+                        ms = MappedStream.FromStream(fs,Ownership.None);
+                    }
+                    catch (Exception)
+                    {
+                       _logger.Warn($"Unable to open file directly. This usually means the file is in use. Switching to raw access\r\n");
+                    }
+
+                    if (ms == null)
+                    {
+                        //raw mode
+                       var ss =  OpenFile(file);
+
+                        ms = MappedStream.FromStream(ss,Ownership.None);
+                    }
+                    
+
+                    using (ms)
                     {
                         while (bytesRemaining > 0)
                         {
@@ -393,14 +416,9 @@ namespace bstrings
                             {
                                 chunkSizeBytes = (int) bytesRemaining;
                             }
-
-                            using (
-                                var accessor = mmf.CreateViewStream(offset, chunkSizeBytes, MemoryMappedFileAccess.Read)
-                                )
-                            {
                                 var chunk = new byte[chunkSizeBytes];
 
-                                accessor.Read(chunk, 0, chunkSizeBytes);
+                                ms.Read(chunk, 0, chunkSizeBytes);
 
                                 if (_fluentCommandLineParser.Object.GetUnicode)
                                 {
@@ -430,7 +448,7 @@ namespace bstrings
                                     _logger.Info(
                                         $"Chunk {chunkIndex:N0} of {totalChunks:N0} finished. Total strings so far: {hits.Count:N0} Elapsed time: {_sw.Elapsed.TotalSeconds:N3} seconds. Average strings/sec: {hits.Count/_sw.Elapsed.TotalSeconds:N0}");
                                 }
-                            }
+                            
                             chunkIndex += 1;
                         }
 
@@ -458,14 +476,10 @@ namespace bstrings
                                 break;
                             }
 
-                            using (
-                                var accessor = mmf.CreateViewStream(offset, boundaryChunkSize,
-                                    MemoryMappedFileAccess.Read)
-                                )
-                            {
+                         
                                 var chunk = new byte[boundaryChunkSize];
 
-                                accessor.Read(chunk, 0, boundaryChunkSize);
+                                ms.Read(chunk, 0, boundaryChunkSize);
 
                                 if (_fluentCommandLineParser.Object.GetUnicode)
                                 {
@@ -499,7 +513,7 @@ namespace bstrings
 
                                 offset += chunkSizeBytes;
                                 bytesRemaining -= chunkSizeBytes;
-                            }
+                          
                             chunkIndex += 1;
                         }
                     }
@@ -725,6 +739,24 @@ namespace bstrings
                 _logger.Info(
                     $"Found {globalCounter:N0} string{suffix} in {globalTimespan:N3} seconds. Average strings/sec: {globalHits/globalTimespan:N0}");
             }
+        }
+
+        private static IFileSystem _fileSystem;
+        private static SparseStream OpenFile(string path)
+        {
+            var rawPath = path.Substring(3);
+            if (_fileSystem != null)
+            {
+                return _fileSystem.OpenFile(rawPath, FileMode.Open, FileAccess.Read);
+            }
+
+            var disk = new RawDisk(path.ToLowerInvariant().First());
+            var rawDiskStream = disk.CreateDiskStream();
+            _fileSystem = new NtfsFileSystem(rawDiskStream);
+            
+            
+
+            return _fileSystem.OpenFile(rawPath, FileMode.Open, FileAccess.Read);
         }
 
         private static string GetSizeReadable(long i)
