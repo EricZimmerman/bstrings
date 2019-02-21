@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using Alphaleonis.Win32.Filesystem;
+using Exceptionless;
 using Fclp;
 using Fclp.Internals.Extensions;
 using Microsoft.Win32;
@@ -29,31 +30,14 @@ namespace bstrings
         private static readonly Dictionary<string, string> RegExDesc = new Dictionary<string, string>();
         private static FluentCommandLineParser<ApplicationArguments> _fluentCommandLineParser;
 
-        private static bool CheckForDotnet46()
-        {
-            using (
-                var ndpKey =
-                    RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry32)
-                        .OpenSubKey("SOFTWARE\\Microsoft\\NET Framework Setup\\NDP\\v4\\Full\\"))
-            {
-                var releaseKey = Convert.ToInt32(ndpKey?.GetValue("Release"));
-
-                return releaseKey >= 393295;
-            }
-        }
-
         private static void Main(string[] args)
         {
+            ExceptionlessClient.Default.Startup("Kruacm8p1B6RFAw2WMnKcEqkQcnWRkF3RmPSOzlW");
+
             SetupNLog();
             SetupPatterns();
 
             _logger = LogManager.GetCurrentClassLogger();
-
-            if (!CheckForDotnet46())
-            {
-                _logger.Warn(".net 4.6 not detected. Please install .net 4.6 and try again.");
-                return;
-            }
 
             _fluentCommandLineParser = new FluentCommandLineParser<ApplicationArguments>
             {
@@ -256,7 +240,7 @@ namespace bstrings
 
             if (_fluentCommandLineParser.Object.File.IsNullOrEmpty() == false)
             {
-                files.Add(_fluentCommandLineParser.Object.File);
+                files.Add(Path.GetFullPath(_fluentCommandLineParser.Object.File));
             }
             else
             {
@@ -264,12 +248,12 @@ namespace bstrings
                 {
                     if (_fluentCommandLineParser.Object.FileMask.Length > 0)
                     {
-                        files.AddRange(Directory.EnumerateFiles(_fluentCommandLineParser.Object.Directory,
+                        files.AddRange(Directory.EnumerateFiles(Path.GetFullPath(_fluentCommandLineParser.Object.Directory),
                             _fluentCommandLineParser.Object.FileMask, SearchOption.AllDirectories));
                     }
                     else
                     {
-                        files.AddRange(Directory.EnumerateFiles(_fluentCommandLineParser.Object.Directory, "*",
+                        files.AddRange(Directory.EnumerateFiles(Path.GetFullPath(_fluentCommandLineParser.Object.Directory), "*",
                             SearchOption.AllDirectories));
                     }
                 }
