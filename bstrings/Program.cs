@@ -8,13 +8,19 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using Alphaleonis.Win32.Filesystem;
+<<<<<<< HEAD
 using Exceptionless;
+=======
+using DiscUtils;
+using DiscUtils.Ntfs;
+using DiscUtils.Streams;
+>>>>>>> e9853207201d203d4afeec3f499c7345a7fc441a
 using Fclp;
 using Fclp.Internals.Extensions;
-using Microsoft.Win32;
 using NLog;
 using NLog.Config;
 using NLog.Targets;
+using RawDiskLib;
 using Directory = Alphaleonis.Win32.Filesystem.Directory;
 using File = Alphaleonis.Win32.Filesystem.File;
 using FileInfo = Alphaleonis.Win32.Filesystem.FileInfo;
@@ -30,6 +36,11 @@ namespace bstrings
         private static readonly Dictionary<string, string> RegExDesc = new Dictionary<string, string>();
         private static FluentCommandLineParser<ApplicationArguments> _fluentCommandLineParser;
 
+<<<<<<< HEAD
+=======
+     
+
+>>>>>>> e9853207201d203d4afeec3f499c7345a7fc441a
         private static void Main(string[] args)
         {
             ExceptionlessClient.Default.Startup("Kruacm8p1B6RFAw2WMnKcEqkQcnWRkF3RmPSOzlW");
@@ -113,7 +124,7 @@ namespace bstrings
                 .As("ar")
                 .SetDefault("[\x20-\x7E]")
                 .WithDescription(
-                    @"Range of characters to search for in 'Codepage' strings. Specify as a range of characters in hex format and enclose in quotes. Default is [\x20 -\x7E]");
+                    @"Range of characters to search for in 'Code page' strings. Specify as a range of characters in hex format and enclose in quotes. Default is [\x20 -\x7E]");
 
             _fluentCommandLineParser.Setup(arg => arg.UnicodeRange)
                 .As("ur")
@@ -125,7 +136,7 @@ namespace bstrings
                 .As("cp")
                 .SetDefault(1252)
                 .WithDescription(
-                    "Codepage to use. Default is 1252. Use the Identifier value for code pages at https://goo.gl/ig6DxW");
+                    "Code page to use. Default is 1252. Use the Identifier value for code pages at https://goo.gl/ig6DxW");
 
             _fluentCommandLineParser.Setup(arg => arg.FileMask)
                 .As("mask")
@@ -182,15 +193,17 @@ namespace bstrings
 
             if (_fluentCommandLineParser.Object.GetPatterns)
             {
-                _logger.Info("Name \t\tDescription");
-                foreach (var regExPattern in RegExPatterns)
+                
+
+                _logger.Warn("Name \t\tDescription");
+                foreach (var regExPattern in RegExPatterns.OrderBy(t=>t.Key))
                 {
                     var desc = RegExDesc[regExPattern.Key];
                     _logger.Info($"{regExPattern.Key}\t{desc}");
                 }
 
                 _logger.Info("");
-                _logger.Info("To use a built in pattern, supply the Name to the --lr switch");
+                _logger.Info("To use a built in pattern, supply the Name to the --lr switch\r\n");
 
                 return;
             }
@@ -380,12 +393,31 @@ namespace bstrings
 
                 try
                 {
-                    using (
-                        var mmf =
-                            MemoryMappedFile.CreateFromFile(
-                                File.Open(File.GetFileSystemEntryInfo(file).LongFullPath, FileMode.Open, FileAccess.Read,
-                                    FileShare.Read, PathFormat.LongFullPath), "source", 0, MemoryMappedFileAccess.Read,
-                                HandleInheritability.None, false))
+                    MappedStream ms = null;
+
+                    try
+                    {
+                       var fs =
+                            File.Open(File.GetFileSystemEntryInfo(file).LongFullPath, FileMode.Open, FileAccess.Read,
+                                FileShare.Read, PathFormat.LongFullPath);
+
+                        ms = MappedStream.FromStream(fs,Ownership.None);
+                    }
+                    catch (Exception)
+                    {
+                       _logger.Warn($"Unable to open file directly. This usually means the file is in use. Switching to raw access\r\n");
+                    }
+
+                    if (ms == null)
+                    {
+                        //raw mode
+                       var ss =  OpenFile(file);
+
+                        ms = MappedStream.FromStream(ss,Ownership.None);
+                    }
+                    
+
+                    using (ms)
                     {
                         while (bytesRemaining > 0)
                         {
@@ -393,14 +425,9 @@ namespace bstrings
                             {
                                 chunkSizeBytes = (int) bytesRemaining;
                             }
-
-                            using (
-                                var accessor = mmf.CreateViewStream(offset, chunkSizeBytes, MemoryMappedFileAccess.Read)
-                                )
-                            {
                                 var chunk = new byte[chunkSizeBytes];
 
-                                accessor.Read(chunk, 0, chunkSizeBytes);
+                                ms.Read(chunk, 0, chunkSizeBytes);
 
                                 if (_fluentCommandLineParser.Object.GetUnicode)
                                 {
@@ -430,7 +457,7 @@ namespace bstrings
                                     _logger.Info(
                                         $"Chunk {chunkIndex:N0} of {totalChunks:N0} finished. Total strings so far: {hits.Count:N0} Elapsed time: {_sw.Elapsed.TotalSeconds:N3} seconds. Average strings/sec: {hits.Count/_sw.Elapsed.TotalSeconds:N0}");
                                 }
-                            }
+                            
                             chunkIndex += 1;
                         }
 
@@ -458,14 +485,10 @@ namespace bstrings
                                 break;
                             }
 
-                            using (
-                                var accessor = mmf.CreateViewStream(offset, boundaryChunkSize,
-                                    MemoryMappedFileAccess.Read)
-                                )
-                            {
+                         
                                 var chunk = new byte[boundaryChunkSize];
 
-                                accessor.Read(chunk, 0, boundaryChunkSize);
+                                ms.Read(chunk, 0, boundaryChunkSize);
 
                                 if (_fluentCommandLineParser.Object.GetUnicode)
                                 {
@@ -499,7 +522,7 @@ namespace bstrings
 
                                 offset += chunkSizeBytes;
                                 bytesRemaining -= chunkSizeBytes;
-                            }
+                          
                             chunkIndex += 1;
                         }
                     }
@@ -727,10 +750,28 @@ namespace bstrings
             }
         }
 
+        private static IFileSystem _fileSystem;
+        private static SparseStream OpenFile(string path)
+        {
+            var rawPath = path.Substring(3);
+            if (_fileSystem != null)
+            {
+                return _fileSystem.OpenFile(rawPath, FileMode.Open, FileAccess.Read);
+            }
+
+            var disk = new RawDisk(path.ToLowerInvariant().First());
+            var rawDiskStream = disk.CreateDiskStream();
+            _fileSystem = new NtfsFileSystem(rawDiskStream);
+            
+            
+
+            return _fileSystem.OpenFile(rawPath, FileMode.Open, FileAccess.Read);
+        }
+
         private static string GetSizeReadable(long i)
         {
             var sign = i < 0 ? "-" : "";
-            double readable = i < 0 ? -i : i;
+            double readable;
             string suffix;
             if (i >= 0x1000000000000000) // Exabyte
             {
@@ -788,13 +829,17 @@ namespace bstrings
             RegExDesc.Add("url3986", "\tFinds URLs according to RFC 3986");
             RegExDesc.Add("xml", "\tFinds XML/HTML tags");
             RegExDesc.Add("sid", "\tFinds Microsoft Security Identifiers (SID)");
-            RegExDesc.Add("win_path", "Finds Windows style paths (C:\folder1\folder2\file.txt)");
+            RegExDesc.Add("win_path", @"Finds Windows style paths (C:\folder1\folder2\file.txt)");
             RegExDesc.Add("var_set", "\tFinds environment variables being set (OS=Windows_NT)");
             RegExDesc.Add("reg_path", "Finds paths related to Registry hives");
             RegExDesc.Add("b64", "\tFinds valid formatted base 64 strings");
+            RegExDesc.Add("bitlocker", "Finds Bitlocker recovery keys");
 
             RegExPatterns.Add("b64",
                 @"^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$");
+
+            RegExPatterns.Add("bitlocker", @"[0-9]{6}?-[0-9]{6}-[0-9]{6}-[0-9]{6}-[0-9]{6}-[0-9]{6}-[0-9]{6}-[0-9]{6}");
+
             RegExPatterns.Add("reg_path", @"([a-z0-9]\\)*(software\\)|(sam\\)|(system\\)|(security\\)[a-z0-9\\]+");
             RegExPatterns.Add("var_set", @"^[a-z_0-9]+=[\\/:\*\?<>|;\- _a-z0-9]+");
             RegExPatterns.Add("win_path",
@@ -901,7 +946,6 @@ namespace bstrings
         private static int ByteSearch(byte[] searchIn, byte[] searchBytes, int start = 0)
         {
             var found = -1;
-            var matched = false;
             //only look at this if we have a populated search array and search bytes with a sensible start
             if (searchIn.Length > 0 && searchBytes.Length > 0 && start <= searchIn.Length - searchBytes.Length &&
                 searchIn.Length >= searchBytes.Length)
@@ -915,7 +959,7 @@ namespace bstrings
                         if (searchIn.Length > 1)
                         {
                             //multiple bytes to be searched we have to compare byte by byte
-                            matched = true;
+                            var matched = true;
                             for (var y = 1; y <= searchBytes.Length - 1; y++)
                             {
                                 if (searchIn[i + y] != searchBytes[y])
@@ -977,9 +1021,13 @@ namespace bstrings
             return hits;
         }
 
-
+        private static readonly string BaseDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
         private static void SetupNLog()
         {
+            if (File.Exists( Path.Combine(BaseDirectory,"Nlog.config")))
+            {
+                return;
+            }
             var config = new LoggingConfiguration();
             var loglevel = LogLevel.Info;
 

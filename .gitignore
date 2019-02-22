@@ -188,4 +188,8 @@ FakesAssemblies/
 GeneratedArtifacts/
 _Pvt_Extensions/
 ModelManifest.xml
+<<<<<<< HEAD
 /.vs
+=======
+/.vs/bstrings/v15/Server/sqlite3
+>>>>>>> e9853207201d203d4afeec3f499c7345a7fc441a

@@ -1,11 +1,1 @@
-﻿0.9.9.0
-
-- Added --off switch to show offsets of string hits. The type of hit will be shown in parenthesis after the offset (A=ASCII, U=Unicode)
-- Change from UTF8 to Windows-1252 encoding to find non-Unicode strings
-
-
-TODO
-
-Multithreaded. Do total chunks/2 for thread count?
-
-Save regex patterns to file for reuse later (if not in included list)
+﻿
