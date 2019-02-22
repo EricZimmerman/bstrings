@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
@@ -73,7 +73,6 @@
       <Version>2.2.6</Version>
     </PackageReference>
     <PackageReference Include="Costura.Fody">
-<<<<<<< HEAD
       <Version>3.3.2</Version>
     </PackageReference>
     <PackageReference Include="Exceptionless">
@@ -84,7 +83,6 @@
     </PackageReference>
     <PackageReference Include="Fody">
       <Version>4.0.2</Version>
-=======
       <Version>3.2.1</Version>
     </PackageReference>
     <PackageReference Include="DeviceIOControlLib">
@@ -98,19 +96,15 @@
     </PackageReference>
     <PackageReference Include="Fody">
       <Version>3.3.3</Version>
->>>>>>> e9853207201d203d4afeec3f499c7345a7fc441a
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="NLog">
-<<<<<<< HEAD
       <Version>4.6.0-rc1</Version>
-=======
       <Version>4.5.11</Version>
     </PackageReference>
     <PackageReference Include="RawDiskLib">
       <Version>0.1.4</Version>
->>>>>>> e9853207201d203d4afeec3f499c7345a7fc441a
     </PackageReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
