@@ -8,13 +8,10 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using Alphaleonis.Win32.Filesystem;
-<<<<<<< HEAD
 using Exceptionless;
-=======
 using DiscUtils;
 using DiscUtils.Ntfs;
 using DiscUtils.Streams;
->>>>>>> e9853207201d203d4afeec3f499c7345a7fc441a
 using Fclp;
 using Fclp.Internals.Extensions;
 using NLog;
@@ -36,11 +33,6 @@ namespace bstrings
         private static readonly Dictionary<string, string> RegExDesc = new Dictionary<string, string>();
         private static FluentCommandLineParser<ApplicationArguments> _fluentCommandLineParser;
 
-<<<<<<< HEAD
-=======
-     
-
->>>>>>> e9853207201d203d4afeec3f499c7345a7fc441a
         private static void Main(string[] args)
         {
             ExceptionlessClient.Default.Startup("Kruacm8p1B6RFAw2WMnKcEqkQcnWRkF3RmPSOzlW");
