@@ -318,6 +318,15 @@ namespace bstrings
 
                 if (_fluentCommandLineParser.Object.SaveTo.Length > 0)
                 {
+                    try
+                    {
+                        File.Create(_fluentCommandLineParser.Object.SaveTo);
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.Fatal($"Unable to create output file '{_fluentCommandLineParser.Object.SaveTo}'! Check permissions and try again! Error: {e.Message}");
+                        return;
+                    }
                     sw = new StreamWriter(_fluentCommandLineParser.Object.SaveTo, true);
                 }
             }
