@@ -185,8 +185,6 @@ namespace bstrings
 
             if (_fluentCommandLineParser.Object.GetPatterns)
             {
-                
-
                 _logger.Warn("Name \t\tDescription");
                 foreach (var regExPattern in RegExPatterns.OrderBy(t=>t.Key))
                 {
@@ -283,7 +281,7 @@ namespace bstrings
             double globalTimespan = 0;
             var withBoundaryHits = false;
 
-            if (_fluentCommandLineParser.Object.SaveTo.Length > 0)
+            if (_fluentCommandLineParser.Object.SaveTo.IsNullOrEmpty() == false &&  _fluentCommandLineParser.Object.SaveTo.Length > 0)
             {
                 var dir = Path.GetDirectoryName(_fluentCommandLineParser.Object.SaveTo);
 
@@ -562,7 +560,7 @@ namespace bstrings
                     regexStrings.Add(regPattern);
                 }
 
-                if (_fluentCommandLineParser.Object.StringFile.Length > 0 || _fluentCommandLineParser.Object.RegexFile.Length > 0)
+                if (_fluentCommandLineParser.Object.StringFile.IsNullOrEmpty() == false || _fluentCommandLineParser.Object.RegexFile.IsNullOrEmpty() == false)
                 {
                     if (_fluentCommandLineParser.Object.StringFile.Length > 0)
                     {

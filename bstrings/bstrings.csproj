@@ -91,7 +91,7 @@
       <Version>0.1.4</Version>
     </PackageReference>
     <PackageReference Include="DiscUtils.Ntfs">
-      <Version>0.13.0-alpha</Version>
+      <Version>0.14.2-alpha</Version>
     </PackageReference>
     <PackageReference Include="FluentCommandLineParser">
       <Version>1.4.3</Version>
@@ -103,7 +103,7 @@
     </PackageReference>
     <PackageReference Include="NLog">
       <Version>4.6.0-rc1</Version>
-      <Version>4.5.11</Version>
+      <Version>4.6.0-rc1</Version>
     </PackageReference>
     <PackageReference Include="RawDiskLib">
       <Version>0.1.4</Version>
