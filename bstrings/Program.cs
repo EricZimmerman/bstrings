@@ -835,6 +835,23 @@ namespace bstrings
             RegExDesc.Add("reg_path", "Finds paths related to Registry hives");
             RegExDesc.Add("b64", "\tFinds valid formatted base 64 strings");
             RegExDesc.Add("bitlocker", "Finds Bitlocker recovery keys");
+            RegExDesc.Add("bitcoin", "\tFinds BitCoin wallet addresses");
+            RegExDesc.Add("aeon", "\tFinds Aeon wallet addresses");
+            RegExDesc.Add("bytecoin", "Finds ByteCoin wallet addresses");
+            RegExDesc.Add("dashcoin", "Finds DashCoin wallet addresses");
+            RegExDesc.Add("fantomcoin", "Finds Fantomcoin wallet addresses");
+            RegExDesc.Add("monero", "\tFinds Monero wallet addresses");
+            RegExDesc.Add("sumokoin", "Finds SumoKoin wallet addresses");
+
+            RegExPatterns.Add("bitcoin", @"\b[13][a-km-zA-HJ-NP-Z1-9]{25,34}\b");
+            RegExPatterns.Add("aeon", @"Wm[st]{1}[0-9a-zA-Z]{94}");
+            RegExPatterns.Add("bytecoin", @"2[0-9AB][0-9a-zA-Z]{93}");
+        
+            RegExPatterns.Add("dashcoin", "D[0-9a-zA-Z]{94}");
+            RegExPatterns.Add("fantomcoin", "6[0-9a-zA-Z]{94}");
+            RegExPatterns.Add("monero", "4[0-9AB][0-9a-zA-Z]{93}|4[0-9AB][0-9a-zA-Z]{104}");
+            RegExPatterns.Add("sumokoin", "Sumoo[0-9a-zA-Z]{94}");
+          
 
             RegExPatterns.Add("b64",
                 @"^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$");

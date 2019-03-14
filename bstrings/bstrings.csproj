@@ -103,7 +103,7 @@
     </PackageReference>
     <PackageReference Include="NLog">
       <Version>4.6.0-rc1</Version>
-      <Version>4.6.0-rc1</Version>
+      <Version>4.6.0-rc2</Version>
     </PackageReference>
     <PackageReference Include="RawDiskLib">
       <Version>0.1.4</Version>
