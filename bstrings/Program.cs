@@ -838,7 +838,8 @@ namespace bstrings
             RegExDesc.Add("bitcoin", "\tFinds BitCoin wallet addresses");
             RegExDesc.Add("aeon", "\tFinds Aeon wallet addresses");
             RegExDesc.Add("bytecoin", "Finds ByteCoin wallet addresses");
-            RegExDesc.Add("dashcoin", "Finds DashCoin wallet addresses");
+            RegExDesc.Add("dashcoin", "Finds DashCoin wallet addresses (D*)");
+            RegExDesc.Add("dashcoin2", "Finds DashCoin wallet addresses (7|X)*");
             RegExDesc.Add("fantomcoin", "Finds Fantomcoin wallet addresses");
             RegExDesc.Add("monero", "\tFinds Monero wallet addresses");
             RegExDesc.Add("sumokoin", "Finds SumoKoin wallet addresses");
@@ -848,6 +849,7 @@ namespace bstrings
             RegExPatterns.Add("bytecoin", @"2[0-9AB][0-9a-zA-Z]{93}");
         
             RegExPatterns.Add("dashcoin", "D[0-9a-zA-Z]{94}");
+            RegExPatterns.Add("dashcoin2", "(7|X)[a-zA-Z0-9]{33}");
             RegExPatterns.Add("fantomcoin", "6[0-9a-zA-Z]{94}");
             RegExPatterns.Add("monero", "4[0-9AB][0-9a-zA-Z]{93}|4[0-9AB][0-9a-zA-Z]{104}");
             RegExPatterns.Add("sumokoin", "Sumoo[0-9a-zA-Z]{94}");
