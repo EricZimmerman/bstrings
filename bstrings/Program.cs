@@ -426,38 +426,38 @@ namespace bstrings
                             {
                                 chunkSizeBytes = (int) bytesRemaining;
                             }
-                                var chunk = new byte[chunkSizeBytes];
+                            var chunk = new byte[chunkSizeBytes];
 
-                                ms.Read(chunk, 0, chunkSizeBytes);
+                            ms.Read(chunk, 0, chunkSizeBytes);
 
-                                if (_fluentCommandLineParser.Object.GetUnicode)
+                            if (_fluentCommandLineParser.Object.GetUnicode)
+                            {
+                                var uh = GetUnicodeHits(chunk, minLength, maxLength, offset,
+                                    _fluentCommandLineParser.Object.ShowOffset);
+                                foreach (var h in uh)
                                 {
-                                    var uh = GetUnicodeHits(chunk, minLength, maxLength, offset,
-                                        _fluentCommandLineParser.Object.ShowOffset);
-                                    foreach (var h in uh)
-                                    {
-                                        hits.Add(h);
-                                    }
+                                    hits.Add(h);
                                 }
+                            }
 
-                                if (_fluentCommandLineParser.Object.GetAscii)
+                            if (_fluentCommandLineParser.Object.GetAscii)
+                            {
+                                var ah = GetAsciiHits(chunk, minLength, maxLength, offset,
+                                    _fluentCommandLineParser.Object.ShowOffset);
+                                foreach (var h in ah)
                                 {
-                                    var ah = GetAsciiHits(chunk, minLength, maxLength, offset,
-                                        _fluentCommandLineParser.Object.ShowOffset);
-                                    foreach (var h in ah)
-                                    {
-                                        hits.Add(h);
-                                    }
+                                    hits.Add(h);
                                 }
+                            }
 
-                                offset += chunkSizeBytes;
-                                bytesRemaining -= chunkSizeBytes;
+                            offset += chunkSizeBytes;
+                            bytesRemaining -= chunkSizeBytes;
 
-                                if (!_fluentCommandLineParser.Object.Quiet)
-                                {
-                                    _logger.Info(
-                                        $"Chunk {chunkIndex:N0} of {totalChunks:N0} finished. Total strings so far: {hits.Count:N0} Elapsed time: {_sw.Elapsed.TotalSeconds:N3} seconds. Average strings/sec: {hits.Count/_sw.Elapsed.TotalSeconds:N0}");
-                                }
+                            if (!_fluentCommandLineParser.Object.Quiet)
+                            {
+                                _logger.Info(
+                                    $"Chunk {chunkIndex:N0} of {totalChunks:N0} finished. Total strings so far: {hits.Count:N0} Elapsed time: {_sw.Elapsed.TotalSeconds:N3} seconds. Average strings/sec: {hits.Count/_sw.Elapsed.TotalSeconds:N0}");
+                            }
                             
                             chunkIndex += 1;
                         }
@@ -487,42 +487,42 @@ namespace bstrings
                             }
 
                          
-                                var chunk = new byte[boundaryChunkSize];
+                            var chunk = new byte[boundaryChunkSize];
 
-                                ms.Read(chunk, 0, boundaryChunkSize);
+                            ms.Read(chunk, 0, boundaryChunkSize);
 
-                                if (_fluentCommandLineParser.Object.GetUnicode)
+                            if (_fluentCommandLineParser.Object.GetUnicode)
+                            {
+                                var uh = GetUnicodeHits(chunk, minLength, maxLength, offset,
+                                    _fluentCommandLineParser.Object.ShowOffset);
+                                foreach (var h in uh)
                                 {
-                                    var uh = GetUnicodeHits(chunk, minLength, maxLength, offset,
-                                        _fluentCommandLineParser.Object.ShowOffset);
-                                    foreach (var h in uh)
-                                    {
-                                        hits.Add("  " + h);
-                                    }
-
-                                    if (withBoundaryHits == false && uh.Count > 0)
-                                    {
-                                        withBoundaryHits = uh.Count > 0;
-                                    }
+                                    hits.Add("  " + h);
                                 }
 
-                                if (_fluentCommandLineParser.Object.GetAscii)
+                                if (withBoundaryHits == false && uh.Count > 0)
                                 {
-                                    var ah = GetAsciiHits(chunk, minLength, maxLength, offset,
-                                        _fluentCommandLineParser.Object.ShowOffset);
-                                    foreach (var h in ah)
-                                    {
-                                        hits.Add("  " + h);
-                                    }
+                                    withBoundaryHits = uh.Count > 0;
+                                }
+                            }
 
-                                    if (withBoundaryHits == false && ah.Count > 0)
-                                    {
-                                        withBoundaryHits = true;
-                                    }
+                            if (_fluentCommandLineParser.Object.GetAscii)
+                            {
+                                var ah = GetAsciiHits(chunk, minLength, maxLength, offset,
+                                    _fluentCommandLineParser.Object.ShowOffset);
+                                foreach (var h in ah)
+                                {
+                                    hits.Add("  " + h);
                                 }
 
-                                offset += chunkSizeBytes;
-                                bytesRemaining -= chunkSizeBytes;
+                                if (withBoundaryHits == false && ah.Count > 0)
+                                {
+                                    withBoundaryHits = true;
+                                }
+                            }
+
+                            offset += chunkSizeBytes;
+                            bytesRemaining -= chunkSizeBytes;
                           
                             chunkIndex += 1;
                         }
