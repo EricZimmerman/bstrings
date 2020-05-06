@@ -75,19 +75,19 @@
       <Version>4.1.0</Version>
     </PackageReference>
     <PackageReference Include="Exceptionless">
-      <Version>4.3.2027</Version>
+      <Version>4.4.0</Version>
     </PackageReference>
     <PackageReference Include="FluentCommandLineParser">
       <Version>1.5.0.20-commands</Version>
     </PackageReference>
     <PackageReference Include="Fody">
       <Version>4.0.2</Version>
-      <Version>6.1.0</Version>
+      <Version>6.1.1</Version>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="DeviceIOControlLib">
-      <Version>0.1.4</Version>
+      <Version>0.1.5</Version>
     </PackageReference>
     <PackageReference Include="DiscUtils.Ntfs">
       <Version>0.14.2-alpha</Version>
@@ -102,10 +102,10 @@
     </PackageReference>
     <PackageReference Include="NLog">
       <Version>4.6.0-rc1</Version>
-      <Version>4.6.8</Version>
+      <Version>4.7.0</Version>
     </PackageReference>
     <PackageReference Include="RawDiskLib">
-      <Version>0.1.5</Version>
+      <Version>0.2.0</Version>
     </PackageReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

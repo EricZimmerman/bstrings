@@ -168,9 +168,9 @@ namespace bstrings
                          @" bstrings.exe -d ""C:\Temp"" --ar ""[\x20-\x37]""" + "\r\n\t " +
                          @" bstrings.exe -d ""C:\Temp"" --cp 10007" + "\r\n\t " +
                          @" bstrings.exe -d ""C:\Temp"" --ls test" + "\r\n\t " +
-                         @" bstrings.exe -f ""C:\Temp\someOtherFile.txt"" --lr cc -sa" + "\r\n\t " +
-                         @" bstrings.exe -f ""C:\Temp\someOtherFile.txt"" --lr cc -sa -m 15 -x 22" + "\r\n\t " +
-                         @" bstrings.exe -f ""C:\Temp\UsrClass 1.dat"" --ls mui -sl" + "\r\n\t ";
+                         @" bstrings.exe -f ""C:\Temp\someOtherFile.txt"" --lr cc --sa" + "\r\n\t " +
+                         @" bstrings.exe -f ""C:\Temp\someOtherFile.txt"" --lr cc --sa -m 15 -x 22" + "\r\n\t " +
+                         @" bstrings.exe -f ""C:\Temp\UsrClass 1.dat"" --ls mui --sl" + "\r\n\t ";
 
             _fluentCommandLineParser.SetupHelp("?", "help")
                 .WithHeader(header)
