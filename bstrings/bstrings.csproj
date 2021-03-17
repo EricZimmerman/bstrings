@@ -46,7 +46,6 @@
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
-    <Reference Include="System.IO.Compression" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.ServiceModel" />
     <Reference Include="System.Transactions" />
@@ -54,7 +53,6 @@
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
-    <Reference Include="System.Net.Http" />
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
@@ -72,22 +70,21 @@
       <Version>2.2.6</Version>
     </PackageReference>
     <PackageReference Include="Costura.Fody">
-      <Version>4.1.0</Version>
+      <Version>5.0.2</Version>
+      <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Exceptionless">
-      <Version>4.4.0</Version>
+      <Version>4.6.2</Version>
     </PackageReference>
     <PackageReference Include="FluentCommandLineParser">
       <Version>1.5.0.20-commands</Version>
     </PackageReference>
     <PackageReference Include="Fody">
-      <Version>4.0.2</Version>
-      <Version>6.1.1</Version>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <Version>6.4.0</Version>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="DeviceIOControlLib">
-      <Version>0.1.5</Version>
+      <Version>0.1.6</Version>
     </PackageReference>
     <PackageReference Include="DiscUtils.Ntfs">
       <Version>0.14.2-alpha</Version>
@@ -102,10 +99,10 @@
     </PackageReference>
     <PackageReference Include="NLog">
       <Version>4.6.0-rc1</Version>
-      <Version>4.7.0</Version>
+      <Version>4.7.8</Version>
     </PackageReference>
     <PackageReference Include="RawDiskLib">
-      <Version>0.2.0</Version>
+      <Version>0.2.1</Version>
     </PackageReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
