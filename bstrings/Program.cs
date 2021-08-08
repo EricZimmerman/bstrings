@@ -136,6 +136,12 @@ namespace bstrings
                 .WithDescription(
                     "When using -d, file mask to search for. * and ? are supported. This option has no effect when using -f");
 
+            _fluentCommandLineParser.Setup(arg => arg.MaximumSize)
+                .As("ms")
+                .SetDefault(-1)
+                .WithDescription(
+                    "When using -d, maximum file size to process. This option has no effect when using -f");
+
             _fluentCommandLineParser.Setup(arg => arg.RegexOnly)
                 .As("ro")
                 .SetDefault(false)
@@ -378,6 +384,16 @@ namespace bstrings
                 var chunkSizeBytes = chunkSizeMb*1024*1024;
 
                 var fileSizeBytes = new FileInfo(file).Length;
+
+                if (_fluentCommandLineParser.Object.MaximumSize > 0)
+                {
+                    if (fileSizeBytes > _fluentCommandLineParser.Object.MaximumSize)
+                    {
+                        _logger.Warn($"'{file}' is bigger than max file size of {_fluentCommandLineParser.Object.MaximumSize} bytes! Skipping...");
+                        continue;
+                    }
+                }
+
                 var bytesRemaining = fileSizeBytes;
                 long offset = 0;
 
@@ -741,7 +757,7 @@ namespace bstrings
                 sw.Close();
             }
 
-            if (!_fluentCommandLineParser.Object.Quiet && files.Count > 1)
+            if (!_fluentCommandLineParser.Object.Quiet && files.Count > 0)
             {
                 var suffix = globalCounter == 1 ? "" : "s";
 
@@ -1082,6 +1098,7 @@ namespace bstrings
         public string UnicodeRange { get; set; } = "[\u0020-\u007E]";
         public int MinimumLength { get; set; } = 3;
         public int MaximumLength { get; set; } = -1;
+        public int MaximumSize { get; set; } = -1;
         public int CodePage { get; set; } = 1252;
         public int BlockSizeMb { get; set; } = 512;
         public bool ShowOffset { get; set; } = false;

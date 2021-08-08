@@ -71,7 +71,7 @@
       <Version>2.2.6</Version>
     </PackageReference>
     <PackageReference Include="Costura.Fody">
-      <Version>5.1.0-alpha0409</Version>
+      <Version>5.2.0</Version>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Exceptionless">
@@ -81,14 +81,14 @@
       <Version>1.5.0.20-commands</Version>
     </PackageReference>
     <PackageReference Include="Fody">
-      <Version>6.4.0</Version>
+      <Version>6.5.2</Version>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="DeviceIOControlLib">
       <Version>0.1.6</Version>
     </PackageReference>
     <PackageReference Include="DiscUtils.Ntfs">
-      <Version>0.14.2-alpha</Version>
+      <Version>0.16.4</Version>
     </PackageReference>
     <PackageReference Include="FluentCommandLineParser">
       <Version>1.4.3</Version>
@@ -100,7 +100,7 @@
     </PackageReference>
     <PackageReference Include="NLog">
       <Version>4.6.0-rc1</Version>
-      <Version>4.7.8</Version>
+      <Version>4.7.10</Version>
     </PackageReference>
     <PackageReference Include="RawDiskLib">
       <Version>0.2.1</Version>
