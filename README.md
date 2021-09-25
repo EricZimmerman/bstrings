@@ -49,6 +49,41 @@ A better strings utility!
               bstrings.exe -f "C:\Temp\someOtherFile.txt" --lr cc --sa -m 15 -x 22
               bstrings.exe -f "C:\Temp\UsrClass 1.dat" --ls mui --sl
 
+## Built In Regular Expressions
+
+Run `bstrings.exe -p` to see the following list of built in Regular Expressions:
+
+              Name            Description
+              aeon            Finds Aeon wallet addresses
+              b64             Finds valid formatted base 64 strings
+              bitcoin         Finds BitCoin wallet addresses
+              bitlocker       Finds Bitlocker recovery keys
+              bytecoin        Finds ByteCoin wallet addresses
+              cc              Finds credit card numbers
+              dashcoin        Finds DashCoin wallet addresses (D*)
+              dashcoin2       Finds DashCoin wallet addresses (7|X)*
+              email           Finds embedded email addresses
+              fantomcoin      Finds Fantomcoin wallet addresses
+              guid            Finds GUIDs
+              ipv4            Finds IP version 4 addresses
+              ipv6            Finds IP version 6 addresses
+              mac             Finds MAC addresses
+              monero          Finds Monero wallet addresses
+              reg_path        Finds paths related to Registry hives
+              sid             Finds Microsoft Security Identifiers (SID)
+              ssn             Finds US Social Security Numbers
+              sumokoin        Finds SumoKoin wallet addresses
+              unc             Finds UNC paths
+              url3986         Finds URLs according to RFC 3986
+              urlUser         Finds usernames in URLs
+              usPhone         Finds US phone numbers
+              var_set         Finds environment variables being set (OS=Windows_NT)
+              win_path        Finds Windows style paths (C:\folder1\folder2\file.txt)
+              xml             Finds XML/HTML tags
+              zip             Finds zip codes
+              
+              To use a built in pattern, supply the Name to the --lr switch 
+
 ## Documentation
 
 [Introducing bstrings, a Better Strings utility!](https://binaryforay.blogspot.com/2015/07/introducing-bstrings-better-strings.html)
