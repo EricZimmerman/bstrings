@@ -1,117 +1,44 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{8D651AF2-8843-4CDF-8A71-A43421B80543}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>bstrings</RootNamespace>
-    <AssemblyName>bstrings</AssemblyName>
-    <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
+    <TargetFrameworks>net46;net6.0</TargetFrameworks>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-    <TargetFrameworkProfile />
-    <NuGetPackageImportStamp>
-    </NuGetPackageImportStamp>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <Prefer32Bit>false</Prefer32Bit>
-    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <AssemblyTitle>bstrings</AssemblyTitle>
+    <Company>Eric Zimmerman</Company>
+    <Product>bstrings</Product>
+    <Description>A better strings utility</Description>
+    <Copyright>Copyright © 2022</Copyright>
+    <AssemblyVersion>1.5.2.0</AssemblyVersion>
+    <FileVersion>1.5.2.0</FileVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <DebugType>embedded</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <Prefer32Bit>false</Prefer32Bit>
-    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
     <DebugSymbols>true</DebugSymbols>
   </PropertyGroup>
   <PropertyGroup>
     <ApplicationIcon>Find Again256.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="System" />
-    <Reference Include="System.Configuration" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Runtime.Serialization" />
-    <Reference Include="System.ServiceModel" />
-    <Reference Include="System.Transactions" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="Program.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="App.config" />
+    <PackageReference Include="AlphaFS.New" Version="2.3.0" />
+    <PackageReference Include="System.Data.DataSetExtensions" Version="4.*" />
+    <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Find Again256.ico" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="AlphaFS">
-      <Version>2.2.6</Version>
-    </PackageReference>
-    <PackageReference Include="Costura.Fody">
-      <Version>5.2.0</Version>
+    <PackageReference Include="Costura.Fody" Version="5.7.0">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Exceptionless">
-      <Version>4.6.2</Version>
-    </PackageReference>
-    <PackageReference Include="FluentCommandLineParser">
-      <Version>1.5.0.20-commands</Version>
-    </PackageReference>
-    <PackageReference Include="Fody">
-      <Version>6.5.2</Version>
+    <PackageReference Include="Exceptionless" Version="4.6.2" />
+    <PackageReference Include="FluentCommandLineParser" Version="1.5.0.20-commands" />
+    <PackageReference Include="Fody" Version="6.6.0">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="DeviceIOControlLib">
-      <Version>0.1.6</Version>
-    </PackageReference>
-    <PackageReference Include="DiscUtils.Ntfs">
-      <Version>0.16.4</Version>
-    </PackageReference>
-    <PackageReference Include="FluentCommandLineParser">
-      <Version>1.4.3</Version>
-    </PackageReference>
-    <PackageReference Include="Fody">
-      <Version>3.3.3</Version>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-    <PackageReference Include="NLog">
-      <Version>4.6.0-rc1</Version>
-      <Version>4.7.10</Version>
-    </PackageReference>
-    <PackageReference Include="RawDiskLib">
-      <Version>0.2.1</Version>
-    </PackageReference>
+    <PackageReference Include="DeviceIOControlLib" Version="0.1.6" />
+    <PackageReference Include="DiscUtils.Ntfs" Version="0.16.13" />
+    
+
+    <PackageReference Include="NLog" Version="4.7.13" />
+    <PackageReference Include="RawDiskLib" Version="0.2.1" />
   </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
 </Project>

@@ -780,8 +780,6 @@ namespace bstrings
             var rawDiskStream = disk.CreateDiskStream();
             _fileSystem = new NtfsFileSystem(rawDiskStream);
             
-            
-
             return _fileSystem.OpenFile(rawPath, FileMode.Open, FileAccess.Read);
         }
 
