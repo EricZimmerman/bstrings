@@ -1,15 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFrameworks>net46;net6.0</TargetFrameworks>
+    <TargetFrameworks>net462;net6.0</TargetFrameworks>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <AssemblyTitle>bstrings</AssemblyTitle>
     <Company>Eric Zimmerman</Company>
+      <LangVersion>10</LangVersion>
     <Product>bstrings</Product>
     <Description>A better strings utility</Description>
     <Copyright>Copyright © 2022</Copyright>
     <AssemblyVersion>1.5.2.0</AssemblyVersion>
     <FileVersion>1.5.2.0</FileVersion>
+      <IsPackable>false</IsPackable>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -21,24 +23,24 @@
     <PackageReference Include="AlphaFS.New" Version="2.3.0" />
     <PackageReference Include="System.Data.DataSetExtensions" Version="4.*" />
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+      <PackageReference Include="System.Text.Encoding.CodePages" Version="6.0.0"/>
   </ItemGroup>
   <ItemGroup>
     <Content Include="Find Again256.ico" />
   </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="Costura.Fody" Version="5.7.0">
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-    <PackageReference Include="Exceptionless" Version="4.6.2" />
-    <PackageReference Include="FluentCommandLineParser" Version="1.5.0.20-commands" />
-    <PackageReference Include="Fody" Version="6.6.0">
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-    <PackageReference Include="DeviceIOControlLib" Version="0.1.6" />
-    <PackageReference Include="DiscUtils.Ntfs" Version="0.16.13" />
-    
-
-    <PackageReference Include="NLog" Version="4.7.13" />
-    <PackageReference Include="RawDiskLib" Version="0.2.1" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Costura.Fody" Version="5.7.0">
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <PackageReference Include="Exceptionless" Version="4.6.2"/>
+        <PackageReference Include="Fody" Version="6.6.0">
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <PackageReference Include="DeviceIOControlLib" Version="0.1.6"/>
+        <PackageReference Include="DiscUtils.Ntfs" Version="0.16.13"/>
+        <PackageReference Include="NLog" Version="4.7.13"/>
+        <PackageReference Include="RawDiskLib" Version="0.2.1"/>
+        <PackageReference Include="System.CommandLine" Version="2.0.0-beta2.21613.2"/>
+        <PackageReference Include="System.CommandLine.NamingConventionBinder" Version="2.0.0-beta2.21613.2"/>
+    </ItemGroup>
 </Project>

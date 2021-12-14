@@ -1,27 +1,34 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.IO.MemoryMappedFiles;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Text.RegularExpressions;
+﻿#if !NET6_0
 using Alphaleonis.Win32.Filesystem;
-using Exceptionless;
-using DiscUtils;
-using DiscUtils.Ntfs;
-using DiscUtils.Streams;
-using Fclp;
-using Fclp.Internals.Extensions;
-using NLog;
-using NLog.Config;
-using NLog.Targets;
-using RawDiskLib;
 using Directory = Alphaleonis.Win32.Filesystem.Directory;
 using File = Alphaleonis.Win32.Filesystem.File;
 using FileInfo = Alphaleonis.Win32.Filesystem.FileInfo;
 using Path = Alphaleonis.Win32.Filesystem.Path;
+#else
+using Path = System.IO.Path;
+using Directory = System.IO.Directory;
+#endif
+using System;
+using System.Collections.Generic;
+using System.CommandLine;
+using System.CommandLine.Help;
+using System.CommandLine.NamingConventionBinder;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using DiscUtils;
+using DiscUtils.Ntfs;
+using DiscUtils.Streams;
+using Exceptionless;
+using NLog;
+using NLog.Config;
+using NLog.Targets;
+using RawDiskLib;
 
 namespace bstrings
 {
@@ -31,168 +38,171 @@ namespace bstrings
         private static Stopwatch _sw;
         private static readonly Dictionary<string, string> RegExPatterns = new Dictionary<string, string>();
         private static readonly Dictionary<string, string> RegExDesc = new Dictionary<string, string>();
-        private static FluentCommandLineParser<ApplicationArguments> _fluentCommandLineParser;
 
-        private static void Main(string[] args)
+        private static string[] _args;
+
+        private static readonly string Header =
+            $"bstrings version {Assembly.GetExecutingAssembly().GetName().Version}" +
+            "\r\n\r\nAuthor: Eric Zimmerman (saericzimmerman@gmail.com)" +
+            "\r\nhttps://github.com/EricZimmerman/bstrings";
+
+        private static readonly string Footer = @"Examples: bstrings.exe -f ""C:\Temp\UsrClass 1.dat"" --ls URL" + "\r\n\t " +
+                                                @"   bstrings.exe -f ""C:\Temp\someFile.txt"" --lr guid" + "\r\n\t " +
+                                                @"   bstrings.exe -f ""C:\Temp\aBigFile.bin"" --fs c:\temp\searchStrings.txt --fr c:\temp\searchRegex.txt -s" +
+                                                "\r\n\t " +
+                                                @"   bstrings.exe -d ""C:\Temp"" --mask ""*.dll""" + "\r\n\t " +
+                                                @"   bstrings.exe -d ""C:\Temp"" --ar ""[\x20-\x37]""" + "\r\n\t " +
+                                                @"   bstrings.exe -d ""C:\Temp"" --cp 10007" + "\r\n\t " +
+                                                @"   bstrings.exe -d ""C:\Temp"" --ls test" + "\r\n\t " +
+                                                @"   bstrings.exe -f ""C:\Temp\someOtherFile.txt"" --lr cc --sa" + "\r\n\t " +
+                                                @"   bstrings.exe -f ""C:\Temp\someOtherFile.txt"" --lr cc --sa -m 15 -x 22" + "\r\n\t " +
+                                                @"   bstrings.exe -f ""C:\Temp\UsrClass 1.dat"" --ls mui --sl";
+
+        private static RootCommand _rootCommand;
+
+        private static IFileSystem _fileSystem;
+
+        private static readonly string BaseDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+
+        private static async Task Main(string[] args)
         {
             ExceptionlessClient.Default.Startup("Kruacm8p1B6RFAw2WMnKcEqkQcnWRkF3RmPSOzlW");
 
             SetupNLog();
             SetupPatterns();
 
+            _args = args;
+
             _logger = LogManager.GetCurrentClassLogger();
 
-            _fluentCommandLineParser = new FluentCommandLineParser<ApplicationArguments>
+            _rootCommand = new RootCommand
             {
-                IsCaseSensitive = false
+                new Option<string>(
+                    "-f",
+                    "File to search. Either this or -d is required"),
+
+                new Option<string>(
+                    "-d",
+                    "Directory to recursively process. Either this or -f is required"),
+
+                new Option<string>(
+                    "-o",
+                    "File to save results to"),
+
+                new Option<bool>(
+                    "-a",
+                    () => true,
+                    "If set, look for ASCII strings. Use -a false to disable"),
+
+                new Option<bool>(
+                    "-u",
+                    () => true,
+                    "If set, look for Unicode strings. Use -u false to disable"),
+
+                new Option<int>(
+                    "-m",
+                    () => 3,
+                    "Minimum string length"),
+
+                new Option<int>(
+                    "-b",
+                    () => 512,
+                    "Chunk size in MB. Valid range is 1 to 1024. Default is 512"),
+
+                new Option<bool>(
+                    "-q",
+                    () => false,
+                    "Quiet mode (Do not show header or total number of hits)"),
+
+                new Option<bool>(
+                    "-s",
+                    () => false,
+                    "Really Quiet mode (Do not display hits to console. Speeds up processing when using -o)"),
+
+                new Option<int>(
+                    "-x",
+                    () => -1,
+                    "Maximum string length. Default is unlimited"),
+
+                new Option<bool>(
+                    "-p",
+                    () => false,
+                    "Display list of built in regular expressions"),
+
+                new Option<string>(
+                    "--ls",
+                    "String to look for. When set, only matching strings are returned"),
+
+                new Option<string>(
+                    "--lr",
+                    "Regex to look for. When set, only strings matching the regex are returned"),
+
+                new Option<string>(
+                    "--fs",
+                    "File containing strings to look for. When set, only matching strings are returned"),
+
+                new Option<string>(
+                    "--fr",
+                    "Directory to save bodyfile formatted results to. --bdl is also required when using this option"),
+
+                new Option<string>(
+                    "--ar",
+                    () => "[\x20-\x7E]",
+                    @"Range of characters to search for in 'Code page' strings. Specify as a range of characters in hex format and enclose in quotes. Default is [\x20 -\x7E]"),
+
+                new Option<string>(
+                    "--ur",
+                    () => "[\u0020-\u007E]",
+                    @"Range of characters to search for in 'Code page' strings. Specify as a range of characters in hex format and enclose in quotes. Default is [\x20 -\x7E]"),
+
+                new Option<int>(
+                    "--cp",
+                    () => 1252,
+                    "Code page to use. Default is 1252. Use the Identifier value for code pages at https://goo.gl/ig6DxW"),
+
+                new Option<string>(
+                    "--mask",
+                    "When using -d, file mask to search for. * and ? are supported. This option has no effect when using -f"),
+
+                new Option<int>(
+                    "--ms",
+                    () => -1,
+                    "When using -d, maximum file size to process. This option has no effect when using -f"),
+
+                new Option<bool>(
+                    "--ro",
+                    () => false,
+                    "When true, list the string matched by regex pattern vs string the pattern was found in (This may result in duplicate strings in output. ~ denotes approx. offset)"),
+
+                new Option<bool>(
+                    "--off",
+                    () => false,
+                    "Show offset to hit after string, followed by the encoding (A=1252, U=Unicode)\r\n"),
+
+                new Option<bool>(
+                    "--sa",
+                    () => false,
+                    "Sort results alphabetically"),
+
+                new Option<bool>(
+                    "--sl",
+                    () => false,
+                    "When true, use LF vs CRLF for Sort results by length")
             };
 
-            _fluentCommandLineParser.Setup(arg => arg.File)
-                .As('f')
-                .WithDescription("File to search. Either this or -d is required");
+            _rootCommand.Description = Header + "\r\n\r\n" + Footer;
 
-            _fluentCommandLineParser.Setup(arg => arg.Directory)
-                .As('d')
-                .WithDescription("Directory to recursively process. Either this or -f is required");
+            _rootCommand.Handler = CommandHandler.Create(DoWork);
 
-            _fluentCommandLineParser.Setup(arg => arg.SaveTo)
-                .As('o')
-                .WithDescription("File to save results to");
+            await _rootCommand.InvokeAsync(args);
+        }
 
-            _fluentCommandLineParser.Setup(arg => arg.GetAscii)
-                .As('a')
-                .SetDefault(true)
-                .WithDescription("If set, look for ASCII strings. Default is true. Use -a false to disable");
-
-            _fluentCommandLineParser.Setup(arg => arg.GetUnicode)
-                .As('u')
-                .SetDefault(true)
-                .WithDescription("If set, look for Unicode strings. Default is true. Use -u false to disable");
-
-            _fluentCommandLineParser.Setup(arg => arg.MinimumLength)
-                .As('m').SetDefault(3).WithDescription("Minimum string length. Default is 3");
-
-            _fluentCommandLineParser.Setup(arg => arg.BlockSizeMb)
-                .As('b').SetDefault(512).WithDescription("Chunk size in MB. Valid range is 1 to 1024. Default is 512");
-
-            _fluentCommandLineParser.Setup(arg => arg.Quiet)
-                .As('q').SetDefault(false).WithDescription("Quiet mode (Do not show header or total number of hits)");
-
-            _fluentCommandLineParser.Setup(arg => arg.QuietQuiet)
-                .As('s')
-                .SetDefault(false)
-                .WithDescription(
-                    "Really Quiet mode (Do not display hits to console. Speeds up processing when using -o)");
-
-            _fluentCommandLineParser.Setup(arg => arg.MaximumLength)
-                .As('x').SetDefault(-1).WithDescription("Maximum string length. Default is unlimited\r\n");
-
-            _fluentCommandLineParser.Setup(arg => arg.GetPatterns)
-                .As('p').SetDefault(false).WithDescription("Display list of built in regular expressions");
-
-            _fluentCommandLineParser.Setup(arg => arg.LookForString)
-                .As("ls")
-                .SetDefault(string.Empty)
-                .WithDescription("String to look for. When set, only matching strings are returned");
-
-            _fluentCommandLineParser.Setup(arg => arg.LookForRegex)
-                .As("lr")
-                .SetDefault(string.Empty)
-                .WithDescription("Regex to look for. When set, only strings matching the regex are returned");
-
-            _fluentCommandLineParser.Setup(arg => arg.StringFile)
-                .As("fs")
-                .SetDefault(string.Empty)
-                .WithDescription("File containing strings to look for. When set, only matching strings are returned");
-
-            _fluentCommandLineParser.Setup(arg => arg.RegexFile)
-                .As("fr")
-                .SetDefault(string.Empty)
-                .WithDescription(
-                    "File containing regex patterns to look for. When set, only strings matching regex patterns are returned\r\n");
-
-
-            _fluentCommandLineParser.Setup(arg => arg.AsciiRange)
-                .As("ar")
-                .SetDefault("[\x20-\x7E]")
-                .WithDescription(
-                    @"Range of characters to search for in 'Code page' strings. Specify as a range of characters in hex format and enclose in quotes. Default is [\x20 -\x7E]");
-
-            _fluentCommandLineParser.Setup(arg => arg.UnicodeRange)
-                .As("ur")
-                .SetDefault("[\u0020-\u007E]")
-                .WithDescription(
-                    "Range of characters to search for in Unicode strings. Specify as a range of characters in hex format and enclose in quotes. Default is [\\u0020-\\u007E]\r\n");
-
-            _fluentCommandLineParser.Setup(arg => arg.CodePage)
-                .As("cp")
-                .SetDefault(1252)
-                .WithDescription(
-                    "Code page to use. Default is 1252. Use the Identifier value for code pages at https://goo.gl/ig6DxW");
-
-            _fluentCommandLineParser.Setup(arg => arg.FileMask)
-                .As("mask")
-                .SetDefault(string.Empty)
-                .WithDescription(
-                    "When using -d, file mask to search for. * and ? are supported. This option has no effect when using -f");
-
-            _fluentCommandLineParser.Setup(arg => arg.MaximumSize)
-                .As("ms")
-                .SetDefault(-1)
-                .WithDescription(
-                    "When using -d, maximum file size to process. This option has no effect when using -f");
-
-            _fluentCommandLineParser.Setup(arg => arg.RegexOnly)
-                .As("ro")
-                .SetDefault(false)
-                .WithDescription(
-                    "When true, list the string matched by regex pattern vs string the pattern was found in (This may result in duplicate strings in output. ~ denotes approx. offset)");
-
-            _fluentCommandLineParser.Setup(arg => arg.ShowOffset)
-                .As("off")
-                .SetDefault(false)
-                .WithDescription(
-                    $"Show offset to hit after string, followed by the encoding (A={_fluentCommandLineParser.Object.CodePage}, U=Unicode)\r\n");
-
-            _fluentCommandLineParser.Setup(arg => arg.SortAlpha)
-                .As("sa").SetDefault(false).WithDescription("Sort results alphabetically");
-
-            _fluentCommandLineParser.Setup(arg => arg.SortLength)
-                .As("sl").SetDefault(false).WithDescription("Sort results by length");
-
-
-            var header =
-                $"bstrings version {Assembly.GetExecutingAssembly().GetName().Version}" +
-                "\r\n\r\nAuthor: Eric Zimmerman (saericzimmerman@gmail.com)" +
-                "\r\nhttps://github.com/EricZimmerman/bstrings";
-
-            var footer = @"Examples: bstrings.exe -f ""C:\Temp\UsrClass 1.dat"" --ls URL" + "\r\n\t " +
-                         @" bstrings.exe -f ""C:\Temp\someFile.txt"" --lr guid" + "\r\n\t " +
-                         @" bstrings.exe -f ""C:\Temp\aBigFile.bin"" --fs c:\temp\searchStrings.txt --fr c:\temp\searchRegex.txt -s" +
-                         "\r\n\t " +
-                         @" bstrings.exe -d ""C:\Temp"" --mask ""*.dll""" + "\r\n\t " +
-                         @" bstrings.exe -d ""C:\Temp"" --ar ""[\x20-\x37]""" + "\r\n\t " +
-                         @" bstrings.exe -d ""C:\Temp"" --cp 10007" + "\r\n\t " +
-                         @" bstrings.exe -d ""C:\Temp"" --ls test" + "\r\n\t " +
-                         @" bstrings.exe -f ""C:\Temp\someOtherFile.txt"" --lr cc --sa" + "\r\n\t " +
-                         @" bstrings.exe -f ""C:\Temp\someOtherFile.txt"" --lr cc --sa -m 15 -x 22" + "\r\n\t " +
-                         @" bstrings.exe -f ""C:\Temp\UsrClass 1.dat"" --ls mui --sl" + "\r\n\t ";
-
-            _fluentCommandLineParser.SetupHelp("?", "help")
-                .WithHeader(header)
-                .Callback(text => _logger.Info(text + "\r\n" + footer));
-
-            var result = _fluentCommandLineParser.Parse(args);
-
-            if (result.HelpCalled)
-            {
-                return;
-            }
-
-            if (_fluentCommandLineParser.Object.GetPatterns)
+        private static void DoWork(string f, string d, string o, bool a, bool u, int m, int b, bool q, bool s, int x, bool p, string ls, string lr, string fs, string fr, string ar, string ur, int cp, string mask, int ms, bool ro, bool off, bool sa, bool sl)
+        {
+            if (p)
             {
                 _logger.Warn("Name \t\tDescription");
-                foreach (var regExPattern in RegExPatterns.OrderBy(t=>t.Key))
+                foreach (var regExPattern in RegExPatterns.OrderBy(t => t.Key))
                 {
                     var desc = RegExDesc[regExPattern.Key];
                     _logger.Info($"{regExPattern.Key}\t{desc}");
@@ -204,79 +214,79 @@ namespace bstrings
                 return;
             }
 
-            if (result.HasErrors)
+            var cpTest = CodePagesEncodingProvider.Instance.GetEncoding(1252);
+
+            if (cpTest == null)
             {
-                _logger.Error("");
-                _logger.Error(result.ErrorText);
-
-                _fluentCommandLineParser.HelpOption.ShowHelp(_fluentCommandLineParser.Options);
-
+                _logger.Warn($"Invalid codepage: '{cp}'. Use the Identifier value for code pages at https://goo.gl/ig6DxW. Verify codepage value and try again");
                 return;
             }
 
-            if (_fluentCommandLineParser.Object.File.IsNullOrEmpty() &&
-                _fluentCommandLineParser.Object.Directory.IsNullOrEmpty())
+            if (string.IsNullOrEmpty(f) && string.IsNullOrEmpty(d))
             {
-                _fluentCommandLineParser.HelpOption.ShowHelp(_fluentCommandLineParser.Options);
+                var helpBld = new HelpBuilder(LocalizationResources.Instance, Console.WindowWidth);
+                var hc = new HelpContext(helpBld, _rootCommand, Console.Out);
+
+                helpBld.Write(hc);
 
                 _logger.Warn("Either -f or -d is required. Exiting");
                 return;
             }
 
-            if (_fluentCommandLineParser.Object.File.IsNullOrEmpty() == false &&
-                !File.Exists(_fluentCommandLineParser.Object.File) &&
-                _fluentCommandLineParser.Object.FileMask.Length == 0)
+            if (string.IsNullOrEmpty(f) == false &&
+                !File.Exists(f) &&
+                mask?.Length == 0)
             {
-                _logger.Warn($"File '{_fluentCommandLineParser.Object.File}' not found. Exiting");
+                _logger.Warn($"File '{f}' not found. Exiting");
                 return;
             }
 
-            if (_fluentCommandLineParser.Object.Directory.IsNullOrEmpty() == false &&
-                !Directory.Exists(_fluentCommandLineParser.Object.Directory) &&
-                _fluentCommandLineParser.Object.FileMask.Length == 0)
+            if (string.IsNullOrEmpty(d) == false &&
+                !Directory.Exists(d) &&
+                mask?.Length == 0)
             {
-                _logger.Warn($"Directory '{_fluentCommandLineParser.Object.Directory}' not found. Exiting");
+                _logger.Warn($"Directory '{d}' not found. Exiting");
                 return;
             }
 
-            if (!_fluentCommandLineParser.Object.Quiet)
+            if (!q)
             {
-                _logger.Info(header);
+                _logger.Info(Header);
                 _logger.Info("");
             }
 
             var files = new List<string>();
 
-            if (_fluentCommandLineParser.Object.File.IsNullOrEmpty() == false)
+            if (string.IsNullOrEmpty(f) == false)
             {
-                files.Add(Path.GetFullPath(_fluentCommandLineParser.Object.File));
+                files.Add(Path.GetFullPath(f));
             }
             else
             {
                 try
                 {
-                    if (_fluentCommandLineParser.Object.FileMask.Length > 0)
+                    if (mask?.Length > 0)
                     {
-                        files.AddRange(Directory.EnumerateFiles(Path.GetFullPath(_fluentCommandLineParser.Object.Directory),
-                            _fluentCommandLineParser.Object.FileMask, SearchOption.AllDirectories));
+                        files.AddRange(Directory.EnumerateFiles(Path.GetFullPath(d!),
+                            mask, SearchOption.AllDirectories));
                     }
                     else
                     {
-                        files.AddRange(Directory.EnumerateFiles(Path.GetFullPath(_fluentCommandLineParser.Object.Directory), "*",
+                        files.AddRange(Directory.EnumerateFiles(Path.GetFullPath(d!), "*",
                             SearchOption.AllDirectories));
                     }
                 }
                 catch (Exception ex)
                 {
                     _logger.Error(
-                        $"Error getting files in '{_fluentCommandLineParser.Object.Directory}'. Error message: {ex.Message}");
+                        $"Error getting files in '{d}'. Error message: {ex.Message}");
                     return;
                 }
             }
 
-            if (!_fluentCommandLineParser.Object.Quiet)
+            if (!q)
             {
-                _logger.Info($"Command line: {string.Join(" ", args)}");
+                _logger.Info($"Command line: {string.Join(" ", _args)}");
                 _logger.Info("");
             }
 
@@ -287,11 +297,11 @@ namespace bstrings
             double globalTimespan = 0;
             var withBoundaryHits = false;
 
-            if (_fluentCommandLineParser.Object.SaveTo.IsNullOrEmpty() == false &&  _fluentCommandLineParser.Object.SaveTo.Length > 0)
+            if (string.IsNullOrEmpty(o) == false && o.Length > 0)
             {
-                _fluentCommandLineParser.Object.SaveTo = _fluentCommandLineParser.Object.SaveTo.TrimEnd('\\');
+                o = o.TrimEnd('\\');
 
-                var dir = Path.GetDirectoryName(_fluentCommandLineParser.Object.SaveTo);
+                var dir = Path.GetDirectoryName(o);
 
                 if (dir != null && Directory.Exists(dir) == false)
                 {
@@ -302,27 +312,27 @@ namespace bstrings
                     catch (Exception)
                     {
                         _logger.Warn(
-                            $"Invalid path: '{_fluentCommandLineParser.Object.SaveTo}'. Results will not be saved to a file.");
+                            $"Invalid path: '{o}'. Results will not be saved to a file.");
                         _logger.Info("");
-                        _fluentCommandLineParser.Object.SaveTo = string.Empty;
+                        o = string.Empty;
                     }
                 }
                 else
                 {
                     if (dir == null)
                     {
-                        _logger.Warn($"Invalid path: '{_fluentCommandLineParser.Object.SaveTo}");
-                        _fluentCommandLineParser.Object.SaveTo = string.Empty;
+                        _logger.Warn($"Invalid path: '{o}");
+                        o = string.Empty;
                     }
                 }
 
-                if (_fluentCommandLineParser.Object.SaveTo.Length > 0 && !_fluentCommandLineParser.Object.Quiet)
+                if (o.Length > 0 && !q)
                 {
-                    _logger.Info($"Saving hits to '{_fluentCommandLineParser.Object.SaveTo}'");
+                    _logger.Info($"Saving hits to '{o}'");
                     _logger.Info("");
                 }
 
-                if (_fluentCommandLineParser.Object.SaveTo.Length > 0)
+                if (o.Length > 0)
                 {
 //                    try
 //                    {
@@ -333,7 +343,7 @@ namespace bstrings
 //                        _logger.Fatal($"Unable to create output file '{_fluentCommandLineParser.Object.SaveTo}'! Check permissions and try again! Error: {e.Message}");
 //                        return;
 //                    }
-                    sw = new StreamWriter(_fluentCommandLineParser.Object.SaveTo, true);
+                    sw = new StreamWriter(o, true);
                 }
             }
 
@@ -351,45 +361,45 @@ namespace bstrings
                 var hits = new HashSet<string>();
 
 
-                var regPattern = _fluentCommandLineParser.Object.LookForRegex;
+                var regPattern = lr;
 
-                if (RegExPatterns.ContainsKey(_fluentCommandLineParser.Object.LookForRegex))
+                if (regPattern != null && RegExPatterns.ContainsKey(lr))
                 {
-                    regPattern = RegExPatterns[_fluentCommandLineParser.Object.LookForRegex];
+                    regPattern = RegExPatterns[lr];
                 }
 
-                if (regPattern.Length > 0 && !_fluentCommandLineParser.Object.Quiet)
+                if (regPattern?.Length > 0 && !q)
                 {
                     _logger.Info($"Searching via RegEx pattern: {regPattern}");
                     _logger.Info("");
                 }
 
                 var minLength = 3;
-                if (_fluentCommandLineParser.Object.MinimumLength > 0)
+                if (m > 0)
                 {
-                    minLength = _fluentCommandLineParser.Object.MinimumLength;
+                    minLength = m;
                 }
 
                 var maxLength = -1;
 
-                if (_fluentCommandLineParser.Object.MaximumLength > minLength)
+                if (x > minLength)
                 {
-                    maxLength = _fluentCommandLineParser.Object.MaximumLength;
+                    maxLength = x;
                 }
 
-                var chunkSizeMb = _fluentCommandLineParser.Object.BlockSizeMb < 1 ||
-                                  _fluentCommandLineParser.Object.BlockSizeMb > 1024
+                var chunkSizeMb = b < 1 ||
+                                  b > 1024
                     ? 512
-                    : _fluentCommandLineParser.Object.BlockSizeMb;
-                var chunkSizeBytes = chunkSizeMb*1024*1024;
+                    : b;
+                var chunkSizeBytes = chunkSizeMb * 1024 * 1024;
 
                 var fileSizeBytes = new FileInfo(file).Length;
 
-                if (_fluentCommandLineParser.Object.MaximumSize > 0)
+                if (ms > 0)
                 {
-                    if (fileSizeBytes > _fluentCommandLineParser.Object.MaximumSize)
+                    if (fileSizeBytes > ms)
                     {
-                        _logger.Warn($"'{file}' is bigger than max file size of {_fluentCommandLineParser.Object.MaximumSize} bytes! Skipping...");
+                        _logger.Warn($"'{file}' is bigger than max file size of {ms:N0} bytes! Skipping...");
                         continue;
                     }
                 }
@@ -398,68 +408,74 @@ namespace bstrings
                 long offset = 0;
 
                 var chunkIndex = 1;
-                var totalChunks = fileSizeBytes/chunkSizeBytes + 1;
-                var hsuffix = totalChunks == 1 ? "" : "s";
+                var totalChunks = fileSizeBytes / chunkSizeBytes + 1;
+                var hSuffix = totalChunks == 1 ? "" : "s";
 
-                if (!_fluentCommandLineParser.Object.Quiet)
+                if (!q)
                 {
                     _logger.Info(
-                        $"Searching {totalChunks:N0} chunk{hsuffix} ({chunkSizeMb} MB each) across {GetSizeReadable(fileSizeBytes)} in '{file}'");
+                        $"Searching {totalChunks:N0} chunk{hSuffix} ({chunkSizeMb} MB each) across {GetSizeReadable(fileSizeBytes)} in '{file}'");
                     _logger.Info("");
                 }
 
                 try
                 {
-                    MappedStream ms = null;
+                    MappedStream mappedStream = null;
 
                     try
                     {
-                       var fs =
-                            File.Open(File.GetFileSystemEntryInfo(file).LongFullPath, FileMode.Open, FileAccess.Read,
-                                FileShare.Read, PathFormat.LongFullPath);
+                        FileStream fileStream;
 
-                        ms = MappedStream.FromStream(fs,Ownership.None);
+#if NET6_0
+                        fileStream = File.Open(file, FileMode.Open, FileAccess.Read, FileShare.Read);
+#else
+                            fileStream =
+                            Alphaleonis.Win32.Filesystem.File.Open(Alphaleonis.Win32.Filesystem.File.GetFileSystemEntryInfo(file).LongFullPath, FileMode.Open, FileAccess.Read,
+                                FileShare.Read, Alphaleonis.Win32.Filesystem.PathFormat.LongFullPath);
+#endif
+
+                        mappedStream = MappedStream.FromStream(fileStream, Ownership.None);
                     }
                     catch (Exception)
                     {
-                       _logger.Warn($"Unable to open file directly. This usually means the file is in use. Switching to raw access\r\n");
+                        // ignored
                     }
 
-                    if (ms == null)
+                    if (mappedStream == null)
                     {
                         //raw mode
-                       var ss =  OpenFile(file);
+                        var ss = OpenFile(file);
 
-                        ms = MappedStream.FromStream(ss,Ownership.None);
+                        mappedStream = MappedStream.FromStream(ss, Ownership.None);
                     }
-                    
 
-                    using (ms)
+                    using (mappedStream)
                     {
                         while (bytesRemaining > 0)
                         {
                             if (bytesRemaining <= chunkSizeBytes)
                             {
-                                chunkSizeBytes = (int) bytesRemaining;
+                                chunkSizeBytes = (int)bytesRemaining;
                             }
+
                             var chunk = new byte[chunkSizeBytes];
 
-                            ms.Read(chunk, 0, chunkSizeBytes);
+                            mappedStream.Read(chunk, 0, chunkSizeBytes);
 
-                            if (_fluentCommandLineParser.Object.GetUnicode)
+                            if (u)
                             {
                                 var uh = GetUnicodeHits(chunk, minLength, maxLength, offset,
-                                    _fluentCommandLineParser.Object.ShowOffset);
+                                    off, ur);
                                 foreach (var h in uh)
                                 {
                                     hits.Add(h);
                                 }
                             }
 
-                            if (_fluentCommandLineParser.Object.GetAscii)
+                            if (a)
                             {
                                 var ah = GetAsciiHits(chunk, minLength, maxLength, offset,
-                                    _fluentCommandLineParser.Object.ShowOffset);
+                                    off, cp, ar);
                                 foreach (var h in ah)
                                 {
                                     hits.Add(h);
@@ -469,30 +485,30 @@ namespace bstrings
                             offset += chunkSizeBytes;
                             bytesRemaining -= chunkSizeBytes;
 
-                            if (!_fluentCommandLineParser.Object.Quiet)
+                            if (!q)
                             {
                                 _logger.Info(
-                                    $"Chunk {chunkIndex:N0} of {totalChunks:N0} finished. Total strings so far: {hits.Count:N0} Elapsed time: {_sw.Elapsed.TotalSeconds:N3} seconds. Average strings/sec: {hits.Count/_sw.Elapsed.TotalSeconds:N0}");
+                                    $"Chunk {chunkIndex:N0} of {totalChunks:N0} finished. Total strings so far: {hits.Count:N0} Elapsed time: {_sw.Elapsed.TotalSeconds:N3} seconds. Average strings/sec: {hits.Count / _sw.Elapsed.TotalSeconds:N0}");
                             }
-                            
+
                             chunkIndex += 1;
                         }
 
                         //do chunk boundary checks to make sure we get everything and not split things
 
-                        if (!_fluentCommandLineParser.Object.Quiet)
+                        if (!q)
                         {
                             _logger.Info(
                                 "Primary search complete. Looking for strings across chunk boundaries...");
                         }
 
                         bytesRemaining = fileSizeBytes;
-                        chunkSizeBytes = chunkSizeMb*1024*1024;
-                        offset = chunkSizeBytes - _fluentCommandLineParser.Object.MinimumLength*10*2;
+                        chunkSizeBytes = chunkSizeMb * 1024 * 1024;
+                        offset = chunkSizeBytes - m * 10 * 2;
                         //move starting point backwards for our starting point
                         chunkIndex = 0;
 
-                        var boundaryChunkSize = _fluentCommandLineParser.Object.MinimumLength*10*2*2;
+                        var boundaryChunkSize = m * 10 * 2 * 2;
                         //grab the same # of bytes on both sides of the boundary
 
                         while (bytesRemaining > 0)
@@ -502,15 +518,14 @@ namespace bstrings
                                 break;
                             }
 
-                         
                             var chunk = new byte[boundaryChunkSize];
 
-                            ms.Read(chunk, 0, boundaryChunkSize);
+                            mappedStream.Read(chunk, 0, boundaryChunkSize);
 
-                            if (_fluentCommandLineParser.Object.GetUnicode)
+                            if (u)
                             {
                                 var uh = GetUnicodeHits(chunk, minLength, maxLength, offset,
-                                    _fluentCommandLineParser.Object.ShowOffset);
+                                    off, ur);
                                 foreach (var h in uh)
                                 {
                                     hits.Add("  " + h);
@@ -522,10 +537,10 @@ namespace bstrings
                                 }
                             }
 
-                            if (_fluentCommandLineParser.Object.GetAscii)
+                            if (a)
                             {
                                 var ah = GetAsciiHits(chunk, minLength, maxLength, offset,
-                                    _fluentCommandLineParser.Object.ShowOffset);
+                                    off, cp, ar);
                                 foreach (var h in ah)
                                 {
                                     hits.Add("  " + h);
@@ -539,7 +554,7 @@ namespace bstrings
 
                             offset += chunkSizeBytes;
                             bytesRemaining -= chunkSizeBytes;
-                          
+
                             chunkIndex += 1;
                         }
                     }
@@ -549,15 +564,16 @@ namespace bstrings
                     _logger.Info("");
                     _logger.Error($"Error: {ex.Message}");
                 }
+
                 _sw.Stop();
 
-                if (!_fluentCommandLineParser.Object.Quiet)
+                if (!q)
                 {
                     _logger.Info("Search complete.");
                     _logger.Info("");
                 }
 
-                if (_fluentCommandLineParser.Object.SortAlpha)
+                if (sa)
                 {
                     _logger.Info("Sorting alphabetically...");
                     _logger.Info("");
@@ -565,7 +581,7 @@ namespace bstrings
                     tempList.Sort();
                     hits = new HashSet<string>(tempList);
                 }
-                else if (_fluentCommandLineParser.Object.SortLength)
+                else if (sl)
                 {
                     _logger.Info("Sorting by length...");
                     _logger.Info("");
@@ -577,52 +593,52 @@ namespace bstrings
                 var regexStrings = new HashSet<string>();
 
                 //set up highlighting
-                if (_fluentCommandLineParser.Object.LookForString.Length > 0)
+                if (ls?.Length > 0)
                 {
-                    fileStrings.Add(_fluentCommandLineParser.Object.LookForString);
+                    fileStrings.Add(ls);
                 }
 
-                if (_fluentCommandLineParser.Object.LookForRegex.Length > 0)
+                if (lr?.Length > 0)
                 {
                     regexStrings.Add(regPattern);
                 }
 
-                if (_fluentCommandLineParser.Object.StringFile.IsNullOrEmpty() == false || _fluentCommandLineParser.Object.RegexFile.IsNullOrEmpty() == false)
+                if (string.IsNullOrEmpty(fs) == false || string.IsNullOrEmpty(fr) == false)
                 {
-                    if (_fluentCommandLineParser.Object.StringFile.Length > 0)
+                    if (fs?.Length > 0)
                     {
-                        if (File.Exists(_fluentCommandLineParser.Object.StringFile))
+                        if (File.Exists(fs))
                         {
-                            fileStrings.UnionWith(new HashSet<string>( File.ReadAllLines(_fluentCommandLineParser.Object.StringFile)));
+                            fileStrings.UnionWith(new HashSet<string>(File.ReadAllLines(fs)));
                         }
                         else
                         {
-                            _logger.Error($"Strings file '{_fluentCommandLineParser.Object.StringFile}' not found.");
+                            _logger.Error($"Strings file '{fs}' not found.");
                         }
                     }
-                    
-                    if (_fluentCommandLineParser.Object.RegexFile.Length > 0)
+
+                    if (fr?.Length > 0)
                     {
-                        if (File.Exists(_fluentCommandLineParser.Object.RegexFile))
+                        if (File.Exists(fr))
                         {
-                            regexStrings.UnionWith(new HashSet<string>(File.ReadAllLines(_fluentCommandLineParser.Object.RegexFile)));
+                            regexStrings.UnionWith(new HashSet<string>(File.ReadAllLines(fr)));
                         }
                         else
                         {
-                            _logger.Error($"Regex file '{_fluentCommandLineParser.Object.RegexFile}' not found.");
+                            _logger.Error($"Regex file '{fr}' not found.");
                         }
                     }
                 }
 
                 AddHighlightingRules(fileStrings.ToList());
 
-                if (_fluentCommandLineParser.Object.RegexOnly == false)
+                if (ro == false)
                 {
                     AddHighlightingRules(regexStrings.ToList(), true);
                 }
 
-              
-                if (!_fluentCommandLineParser.Object.Quiet)
+
+                if (!q)
                 {
                     _logger.Info("Processing strings...");
                     _logger.Info("");
@@ -643,6 +659,7 @@ namespace bstrings
                             {
                                 continue;
                             }
+
                             if (hit.IndexOf(fileString, StringComparison.InvariantCultureIgnoreCase) < 0)
                             {
                                 continue;
@@ -650,7 +667,7 @@ namespace bstrings
 
                             counter += 1;
 
-                            if (_fluentCommandLineParser.Object.QuietQuiet == false)
+                            if (s == false)
                             {
                                 _logger.Info(hit);
                             }
@@ -658,10 +675,10 @@ namespace bstrings
                             sw?.WriteLine(hit);
                         }
 
-                        var hitoffset = "";
-                        if (_fluentCommandLineParser.Object.ShowOffset)
+                        var hitOffset = "";
+                        if (off)
                         {
-                            hitoffset = $"~{hit.Split('\t').Last()}";
+                            hitOffset = $"~{hit.Split('\t').Last()}";
                         }
 
                         foreach (var regString in regexStrings)
@@ -683,21 +700,21 @@ namespace bstrings
 
                                 counter += 1;
 
-                                if (_fluentCommandLineParser.Object.RegexOnly)
+                                if (ro)
                                 {
                                     foreach (var match in reg1.Matches(hit))
                                     {
-                                        if (_fluentCommandLineParser.Object.QuietQuiet == false)
+                                        if (s == false)
                                         {
-                                            _logger.Info($"{match}\t{hitoffset}");
+                                            _logger.Info($"{match}\t{hitOffset}");
                                         }
 
-                                        sw?.WriteLine($"{match}\t{hitoffset}");
+                                        sw?.WriteLine($"{match}\t{hitOffset}");
                                     }
                                 }
                                 else
                                 {
-                                    if (_fluentCommandLineParser.Object.QuietQuiet == false)
+                                    if (s == false)
                                     {
                                         _logger.Info(hit);
                                     }
@@ -715,17 +732,17 @@ namespace bstrings
                     {
                         //dump all strings
                         counter += 1;
-                        
-                        if (_fluentCommandLineParser.Object.QuietQuiet == false)
+
+                        if (s == false)
                         {
                             _logger.Info(hit);
                         }
-                        
+
                         sw?.WriteLine(hit);
                     }
                 }
 
-                if (_fluentCommandLineParser.Object.Quiet)
+                if (q)
                 {
                     continue;
                 }
@@ -741,7 +758,7 @@ namespace bstrings
                 }
 
                 _logger.Info(
-                    $"Found {counter:N0} string{suffix} in {_sw.Elapsed.TotalSeconds:N3} seconds. Average strings/sec: {hits.Count/_sw.Elapsed.TotalSeconds:N0}");
+                    $"Found {counter:N0} string{suffix} in {_sw.Elapsed.TotalSeconds:N3} seconds. Average strings/sec: {hits.Count / _sw.Elapsed.TotalSeconds:N0}");
                 globalCounter += counter;
                 globalHits += hits.Count;
                 globalTimespan += _sw.Elapsed.TotalSeconds;
@@ -751,25 +768,31 @@ namespace bstrings
                         "-------------------------------------------------------------------------------------\r\n");
                 }
             }
+
             if (sw != null)
             {
                 sw.Flush();
                 sw.Close();
             }
 
-            if (!_fluentCommandLineParser.Object.Quiet && files.Count > 0)
+            if (q || files.Count <= 1)
             {
-                var suffix = globalCounter == 1 ? "" : "s";
-
-                _logger.Info("");
-                _logger.Info(
-                    $"Found {globalCounter:N0} string{suffix} in {globalTimespan:N3} seconds. Average strings/sec: {globalHits/globalTimespan:N0}");
+                return;
             }
+
+            var suffix2 = globalCounter == 1 ? "" : "s";
+            _logger.Info(
+                $"Total across {files.Count:N0} files: Found {globalCounter:N0} string{suffix2} in {globalTimespan:N3} seconds. Average strings/sec: {globalHits / globalTimespan:N0}");
+            _logger.Info("");
         }
 
-        private static IFileSystem _fileSystem;
         private static SparseStream OpenFile(string path)
         {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                throw new NotSupportedException("Raw disk access not supported on non-Windows systems. Exiting\r\n");
+            }
+
             var rawPath = path.Substring(3);
             if (_fileSystem != null)
             {
@@ -779,7 +802,7 @@ namespace bstrings
             var disk = new RawDisk(path.ToLowerInvariant().First());
             var rawDiskStream = disk.CreateDiskStream();
             _fileSystem = new NtfsFileSystem(rawDiskStream);
-            
+
             return _fileSystem.OpenFile(rawPath, FileMode.Open, FileAccess.Read);
         }
 
@@ -822,7 +845,8 @@ namespace bstrings
             {
                 return i.ToString(sign + "0 B"); // Byte
             }
-            readable = readable/1024;
+
+            readable = readable / 1024;
 
             return sign + readable.ToString("0.### ") + suffix;
         }
@@ -861,13 +885,13 @@ namespace bstrings
             RegExPatterns.Add("bitcoin", @"\b[13][a-km-zA-HJ-NP-Z1-9]{25,34}\b");
             RegExPatterns.Add("aeon", @"Wm[st]{1}[0-9a-zA-Z]{94}");
             RegExPatterns.Add("bytecoin", @"2[0-9AB][0-9a-zA-Z]{93}");
-        
+
             RegExPatterns.Add("dashcoin", "D[0-9a-zA-Z]{94}");
             RegExPatterns.Add("dashcoin2", "(7|X)[a-zA-Z0-9]{33}");
             RegExPatterns.Add("fantomcoin", "6[0-9a-zA-Z]{94}");
             RegExPatterns.Add("monero", "4[0-9AB][0-9a-zA-Z]{93}|4[0-9AB][0-9a-zA-Z]{104}");
             RegExPatterns.Add("sumokoin", "Sumoo[0-9a-zA-Z]{94}");
-          
+
 
             RegExPatterns.Add("b64",
                 @"^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$");
@@ -885,11 +909,11 @@ namespace bstrings
             RegExPatterns.Add("unc", @"^\\\\(?<server>[a-z0-9 %._-]+)\\(?<share>[a-z0-9 $%._-]+)");
             RegExPatterns.Add("mac", "\\b[0-9A-F]{2}([-:]?)(?:[0-9A-F]{2}\\1){4}[0-9A-F]{2}\\b");
             RegExPatterns.Add("ssn", "\\b(?!000)(?!666)[0-8][0-9]{2}[- ](?!00)[0-9]{2}[- ](?!0000)[0-9]{4}\\b");
-           // RegExPatterns.Add("cc","^(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|6(?:011|5[0-9][0-9])[0-9]{12}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|(?:2131|1800|35\\d{3})\\d{11})$");
+            // RegExPatterns.Add("cc","^(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|6(?:011|5[0-9][0-9])[0-9]{12}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|(?:2131|1800|35\\d{3})\\d{11})$");
             RegExPatterns.Add("cc", @"^[ -]*(?:4[ -]*(?:\d[ -]*){11}(?:(?:\d[ -]*){3})?\d|5[ -]*[1-5](?:[ -]*[0-9]){14}|6[ -]*(?:0[ -]*1[ -]*1|5[ -]*\d[ -]*\d)(?:[ -]*[0-9]){12}|3[ -]*[47](?:[ -]*[0-9]){13}|3[ -]*(?:0[ -]*[0-5]|[68][ -]*[0-9])(?:[ -]*[0-9]){11}|(?:2[ -]*1[ -]*3[ -]*1|1[ -]*8[ -]*0[ -]*0|3[ -]*5(?:[ -]*[0-9]){3})(?:[ -]*[0-9]){11})[ -]*$");
-            RegExPatterns.Add("ipv4",@"\b(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\b");
+            RegExPatterns.Add("ipv4", @"\b(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\b");
             RegExPatterns.Add("ipv6", @"(?<![:.\w])(?:[A-F0-9]{1,4}:){7}[A-F0-9]{1,4}(?![:.\w])");
-   //         RegExPatterns.Add("email",@"[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?");
+            //         RegExPatterns.Add("email",@"[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?");
             RegExPatterns.Add("email", @"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,6}\b");
             RegExPatterns.Add("zip", @"\A\b[0-9]{5}(?:-[0-9]{4})?\b\z");
             RegExPatterns.Add("urlUser", @"^[a-z0-9+\-.]+://(?<user>[a-z0-9\-._~%!$&'()*+,;=]+)@");
@@ -908,7 +932,7 @@ namespace bstrings
 
         private static void AddHighlightingRules(List<string> words, bool isRegEx = false)
         {
-            var target = (ColoredConsoleTarget) LogManager.Configuration.FindTargetByName("console");
+            var target = (ColoredConsoleTarget)LogManager.Configuration.FindTargetByName("console");
             var rule = target.WordHighlightingRules.FirstOrDefault();
 
             var bgColor = ConsoleOutputColor.Green;
@@ -922,7 +946,7 @@ namespace bstrings
 
             foreach (var word in words)
             {
-                var r = new ConsoleWordHighlightingRule {IgnoreCase = true};
+                var r = new ConsoleWordHighlightingRule { IgnoreCase = true };
                 if (isRegEx)
                 {
                     r.Regex = word;
@@ -931,6 +955,7 @@ namespace bstrings
                 {
                     r.Text = word;
                 }
+
                 r.ForegroundColor = fgColor;
                 r.BackgroundColor = bgColor;
 
@@ -948,12 +973,12 @@ namespace bstrings
         }
 
         private static List<string> GetUnicodeHits(byte[] bytes, int minSize, int maxSize, long currentOffset,
-            bool withOffsets)
+            bool withOffsets, string ur)
         {
             var maxString = maxSize == -1 ? "" : maxSize.ToString();
             var mi2 = $"{"{"}{minSize}{","}{maxString}{"}"}";
 
-            var uniRange = _fluentCommandLineParser.Object.UnicodeRange; 
+            var uniRange = ur;
             var regUni = new Regex($"{uniRange}{mi2}", RegexOptions.Compiled);
             var uniString = Encoding.Unicode.GetString(bytes);
 
@@ -963,7 +988,7 @@ namespace bstrings
             {
                 if (withOffsets)
                 {
-                    var actualOffset = (currentOffset + match.Index)*2;
+                    var actualOffset = (currentOffset + match.Index) * 2;
 
                     hits.Add($"{match.Value.Trim()}{'\t'}0x{actualOffset:X} (U)");
                 }
@@ -1002,6 +1027,7 @@ namespace bstrings
                                     break;
                                 }
                             }
+
                             //everything matched up
                             if (matched)
                             {
@@ -1018,18 +1044,21 @@ namespace bstrings
                     }
                 }
             }
+
             return found;
         }
 
         private static List<string> GetAsciiHits(byte[] bytes, int minSize, int maxSize, long currentOffset,
-            bool withOffsets)
+            bool withOffsets, int cp, string ar)
         {
             var maxString = maxSize == -1 ? "" : maxSize.ToString();
             var mi2 = $"{"{"}{minSize}{","}{maxString}{"}"}";
 
-            var ascRange = _fluentCommandLineParser.Object.AsciiRange; 
+            var ascRange = ar;
             var regAsc = new Regex($"{ascRange}{mi2}", RegexOptions.Compiled);
-            var ascString = Encoding.GetEncoding(_fluentCommandLineParser.Object.CodePage).GetString(bytes);
+
+            var codePage = CodePagesEncodingProvider.Instance.GetEncoding(cp);
+            var ascString = codePage!.GetString(bytes);
 
             var hits = new List<string>();
 
@@ -1037,7 +1066,7 @@ namespace bstrings
             {
                 if (withOffsets)
                 {
-                    var matchBytes = Encoding.GetEncoding(_fluentCommandLineParser.Object.CodePage)
+                    var matchBytes = codePage!
                         .GetBytes(match.Value);
 
                     var pos = ByteSearch(bytes, matchBytes, match.Index);
@@ -1055,13 +1084,13 @@ namespace bstrings
             return hits;
         }
 
-        private static readonly string BaseDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
         private static void SetupNLog()
         {
-            if (File.Exists( Path.Combine(BaseDirectory,"Nlog.config")))
+            if (File.Exists(Path.Combine(BaseDirectory, "Nlog.config")))
             {
                 return;
             }
+
             var config = new LoggingConfiguration();
             var loglevel = LogLevel.Info;
 
@@ -1078,33 +1107,5 @@ namespace bstrings
 
             LogManager.Configuration = config;
         }
-    }
-
-    internal class ApplicationArguments
-    {
-        public string File { get; set; }
-        public string Directory { get; set; }
-        public string SaveTo { get; set; } = string.Empty;
-        public bool GetAscii { get; set; } = true;
-        public bool GetUnicode { get; set; } = true;
-        public string LookForString { get; set; } = string.Empty;
-        public string FileMask { get; set; } = string.Empty;
-        public string StringFile { get; set; } = string.Empty;
-        public string RegexFile { get; set; } = string.Empty;
-        public string LookForRegex { get; set; } = string.Empty;
-        public string AsciiRange { get; set; } = "[\x20-\x7E]";
-        public string UnicodeRange { get; set; } = "[\u0020-\u007E]";
-        public int MinimumLength { get; set; } = 3;
-        public int MaximumLength { get; set; } = -1;
-        public int MaximumSize { get; set; } = -1;
-        public int CodePage { get; set; } = 1252;
-        public int BlockSizeMb { get; set; } = 512;
-        public bool ShowOffset { get; set; } = false;
-        public bool SortLength { get; set; } = false;
-        public bool SortAlpha { get; set; } = false;
-        public bool Quiet { get; set; } = false;
-        public bool QuietQuiet { get; set; } = false;
-        public bool GetPatterns { get; set; } = false;
-        public bool RegexOnly { get; set; } = false;
     }
 }
