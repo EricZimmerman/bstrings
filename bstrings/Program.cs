@@ -1,14 +1,4 @@
-﻿#if !NET6_0
-using Alphaleonis.Win32.Filesystem;
-using Directory = Alphaleonis.Win32.Filesystem.Directory;
-using File = Alphaleonis.Win32.Filesystem.File;
-using FileInfo = Alphaleonis.Win32.Filesystem.FileInfo;
-using Path = Alphaleonis.Win32.Filesystem.Path;
-#else
-using Path = System.IO.Path;
-using Directory = System.IO.Directory;
-#endif
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Help;
@@ -21,15 +11,25 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Alphaleonis.Win32.Filesystem;
 using DiscUtils;
 using DiscUtils.Ntfs;
 using DiscUtils.Streams;
 using Exceptionless;
-
 using RawDiskLib;
 using Serilog;
 using Serilog.Core;
 using Serilog.Events;
+#if !NET6_0
+using Directory = Alphaleonis.Win32.Filesystem.Directory;
+using File = Alphaleonis.Win32.Filesystem.File;
+using FileInfo = Alphaleonis.Win32.Filesystem.FileInfo;
+using Path = Alphaleonis.Win32.Filesystem.Path;
+
+#else
+using Path = System.IO.Path;
+using Directory = System.IO.Directory;
+#endif
 
 namespace bstrings;
 
@@ -68,7 +68,6 @@ internal class Program
         ExceptionlessClient.Default.Startup("Kruacm8p1B6RFAw2WMnKcEqkQcnWRkF3RmPSOzlW");
 
         SetupPatterns();
-
 
         _rootCommand = new RootCommand
         {
@@ -183,11 +182,11 @@ internal class Program
                 "--sl",
                 () => false,
                 "When true, use LF vs CRLF for Sort results by length"),
-            
+
             new Option<bool>(
-            "--debug",
-            () => false,
-            "Show debug information during processing"),
+                "--debug",
+                () => false,
+                "Show debug information during processing"),
 
             new Option<bool>(
                 "--trace",
@@ -200,7 +199,7 @@ internal class Program
         _rootCommand.Handler = CommandHandler.Create(DoWork);
 
         await _rootCommand.InvokeAsync(args);
-        
+
         Log.CloseAndFlush();
     }
 
@@ -221,21 +220,21 @@ internal class Program
             levelSwitch.MinimumLevel = LogEventLevel.Verbose;
             template = "[{Timestamp:HH:mm:ss.fff} {Level:u3}] {Message:lj}{NewLine}{Exception}";
         }
-        
+
         var conf = new LoggerConfiguration()
             .WriteTo.Console(outputTemplate: template)
             .MinimumLevel.ControlledBy(levelSwitch);
-      
+
         Log.Logger = conf.CreateLogger();
 
-        
+
         if (p)
         {
             Log.Information("Name \t\tDescription");
             foreach (var regExPattern in RegExPatterns.OrderBy(t => t.Key))
             {
                 var desc = RegExDesc[regExPattern.Key];
-                Log.Information("{Key}\t{Desc}",regExPattern.Key,desc);
+                Log.Information("{Key}\t{Desc}", regExPattern.Key, desc);
             }
 
             Console.WriteLine();
@@ -248,7 +247,7 @@ internal class Program
 
         if (cpTest == null)
         {
-            Log.Warning("Invalid codepage: '{Cp}'. Use the Identifier value for code pages at https://goo.gl/ig6DxW. Verify codepage value and try again",cp);
+            Log.Warning("Invalid codepage: '{Cp}'. Use the Identifier value for code pages at https://goo.gl/ig6DxW. Verify codepage value and try again", cp);
             return;
         }
 
@@ -267,7 +266,7 @@ internal class Program
             !File.Exists(f) &&
             mask?.Length == 0)
         {
-            Log.Warning("File '{F}' not found. Exiting",f);
+            Log.Warning("File '{F}' not found. Exiting", f);
             return;
         }
 
@@ -275,13 +274,13 @@ internal class Program
             !Directory.Exists(d) &&
             mask?.Length == 0)
         {
-            Log.Warning("Directory '{D}' not found. Exiting",d);
+            Log.Warning("Directory '{D}' not found. Exiting", d);
             return;
         }
 
         if (!q)
         {
-            Log.Information("{Header}",Header);
+            Log.Information("{Header}", Header);
             Console.WriteLine();
         }
 
@@ -308,14 +307,14 @@ internal class Program
             }
             catch (Exception ex)
             {
-                Log.Error(ex,"Error getting files in '{D}'. Error message: {Message}",d,ex.Message);
+                Log.Error(ex, "Error getting files in '{D}'. Error message: {Message}", d, ex.Message);
                 return;
             }
         }
 
         if (!q)
         {
-            Log.Information("Command line: {Args}",string.Join(" ", Environment.GetCommandLineArgs().Skip(1)));
+            Log.Information("Command line: {Args}", string.Join(" ", Environment.GetCommandLineArgs().Skip(1)));
             Console.WriteLine();
         }
 
@@ -340,7 +339,7 @@ internal class Program
                 }
                 catch (Exception)
                 {
-                    Log.Warning("Invalid path: '{O}'. Results will not be saved to a file",o);
+                    Log.Warning("Invalid path: '{O}'. Results will not be saved to a file", o);
                     Console.WriteLine();
                     o = string.Empty;
                 }
@@ -349,14 +348,14 @@ internal class Program
             {
                 if (dir == null)
                 {
-                    Log.Warning("Invalid path: '{O}",o);
+                    Log.Warning("Invalid path: '{O}", o);
                     o = string.Empty;
                 }
             }
 
             if (o.Length > 0 && !q)
             {
-                Log.Information("Saving hits to '{O}'",o);
+                Log.Information("Saving hits to '{O}'", o);
                 Console.WriteLine();
             }
 
@@ -371,7 +370,7 @@ internal class Program
         {
             if (File.Exists(file) == false)
             {
-                Log.Warning("'{File}' does not exist! Skipping",file);
+                Log.Warning("'{File}' does not exist! Skipping", file);
             }
 
             _sw = new Stopwatch();
@@ -388,7 +387,7 @@ internal class Program
 
             if (regPattern?.Length > 0 && !q)
             {
-                Log.Information("Searching via RegEx pattern: {RegPattern}",regPattern);
+                Log.Information("Searching via RegEx pattern: {RegPattern}", regPattern);
                 Console.WriteLine();
             }
 
@@ -417,7 +416,7 @@ internal class Program
             {
                 if (fileSizeBytes > ms)
                 {
-                    Log.Warning("'{File}' is bigger than max file size of {Ms:N0} bytes! Skipping...",file,ms);
+                    Log.Warning("'{File}' is bigger than max file size of {Ms:N0} bytes! Skipping...", file, ms);
                     continue;
                 }
             }
@@ -427,12 +426,19 @@ internal class Program
 
             var chunkIndex = 1;
             var totalChunks = fileSizeBytes / chunkSizeBytes + 1;
-            var hSuffix = totalChunks == 1 ? "" : "s";
 
             if (!q)
             {
-                Log.Information(
-                    "Searching {TotalChunks:N0} {Suffix} ({ChunkSizeMb} MB each) across {SizeReadable} in '{File}'",totalChunks,$"chunk{hSuffix}",chunkSizeMb,GetSizeReadable(fileSizeBytes),file);
+                if (totalChunks == 1)
+                {
+                    Log.Information("Searching {TotalChunks:N0} chunk ({ChunkSizeMb} MB each) across {SizeReadable} in '{File}'", totalChunks, chunkSizeMb, GetSizeReadable(fileSizeBytes), file);
+                }
+                else
+                {
+                    Log.Information("Searching {TotalChunks:N0} chunks ({ChunkSizeMb} MB each) across {SizeReadable} in '{File}'", totalChunks, chunkSizeMb, GetSizeReadable(fileSizeBytes), file);
+                }
+
+
                 Console.WriteLine();
             }
 
@@ -448,8 +454,8 @@ internal class Program
                         fileStream = File.Open(file, FileMode.Open, FileAccess.Read, FileShare.Read);
 #else
                     fileStream =
-                        Alphaleonis.Win32.Filesystem.File.Open(Alphaleonis.Win32.Filesystem.File.GetFileSystemEntryInfo(file).LongFullPath, FileMode.Open, FileAccess.Read,
-                            FileShare.Read, Alphaleonis.Win32.Filesystem.PathFormat.LongFullPath);
+                        File.Open(File.GetFileSystemEntryInfo(file).LongFullPath, FileMode.Open, FileAccess.Read,
+                            FileShare.Read, PathFormat.LongFullPath);
 #endif
 
                     mappedStream = MappedStream.FromStream(fileStream, Ownership.None);
@@ -506,7 +512,7 @@ internal class Program
                         if (!q)
                         {
                             Log.Information(
-                                "Chunk {ChunkIndex:N0} of {TotalChunks:N0} finished. Total strings so far: {HitsCount:N0} Elapsed time: {TotalSeconds:N3} seconds. Average strings/sec: {Speed:N0}",chunkIndex,totalChunks,hits.Count,_sw.Elapsed.TotalSeconds,hits.Count / _sw.Elapsed.TotalSeconds);
+                                "Chunk {ChunkIndex:N0} of {TotalChunks:N0} finished. Total strings so far: {HitsCount:N0} Elapsed time: {TotalSeconds:N3} seconds. Average strings/sec: {Speed:N0}", chunkIndex, totalChunks, hits.Count, _sw.Elapsed.TotalSeconds, hits.Count / _sw.Elapsed.TotalSeconds);
                         }
 
                         chunkIndex += 1;
@@ -579,7 +585,7 @@ internal class Program
             catch (Exception ex)
             {
                 Console.WriteLine();
-                Log.Error(ex,"Error: {Message}",ex.Message);
+                Log.Error(ex, "Error: {Message}", ex.Message);
             }
 
             _sw.Stop();
@@ -630,7 +636,7 @@ internal class Program
                     }
                     else
                     {
-                        Log.Error("Strings file '{Fs}' not found",fs);
+                        Log.Error("Strings file '{Fs}' not found", fs);
                     }
                 }
 
@@ -642,7 +648,7 @@ internal class Program
                     }
                     else
                     {
-                        Log.Error("Regex file '{Fr}' not found",fr);
+                        Log.Error("Regex file '{Fr}' not found", fr);
                     }
                 }
             }
@@ -651,7 +657,7 @@ internal class Program
 
             if (ro == false)
             {
-              //  AddHighlightingRules(regexStrings.ToList(), true);
+                //  AddHighlightingRules(regexStrings.ToList(), true);
             }
 
 
@@ -686,7 +692,7 @@ internal class Program
 
                         if (s == false)
                         {
-                            Log.Information("{Hit}",hit);
+                            Log.Information("{Hit}", hit);
                         }
 
                         sw?.WriteLine(hit);
@@ -723,7 +729,7 @@ internal class Program
                                 {
                                     if (s == false)
                                     {
-                                        Log.Information("{Match}\t{HitOffset}",match,hitOffset);
+                                        Log.Information("{Match}\t{HitOffset}", match, hitOffset);
                                     }
 
                                     sw?.WriteLine($"{match}\t{hitOffset}");
@@ -733,7 +739,7 @@ internal class Program
                             {
                                 if (s == false)
                                 {
-                                    Log.Information("{Hit}",hit);
+                                    Log.Information("{Hit}", hit);
                                 }
 
                                 sw?.WriteLine(hit);
@@ -741,7 +747,7 @@ internal class Program
                         }
                         catch (Exception ex)
                         {
-                            Log.Error(ex,"Error setting up regular expression '{RegString}': {Message}",regString,ex.Message);
+                            Log.Error(ex, "Error setting up regular expression '{RegString}': {Message}", regString, ex.Message);
                         }
                     }
                 }
@@ -752,7 +758,7 @@ internal class Program
 
                     if (s == false)
                     {
-                        Log.Information("{Hit}",hit);
+                        Log.Information("{Hit}", hit);
                     }
 
                     sw?.WriteLine(hit);
@@ -775,13 +781,13 @@ internal class Program
 
             if (counter == 1)
             {
-                Log.Information("Found {Counter:N0} string in {TotalSeconds:N3} seconds. Average strings/sec: {Hits:N0}",counter,_sw.Elapsed.TotalSeconds,hits.Count / _sw.Elapsed.TotalSeconds);
+                Log.Information("Found {Counter:N0} string in {TotalSeconds:N3} seconds. Average strings/sec: {Hits:N0}", counter, _sw.Elapsed.TotalSeconds, hits.Count / _sw.Elapsed.TotalSeconds);
             }
             else
             {
-                Log.Information("Found {Counter:N0} strings in {TotalSeconds:N3} seconds. Average strings/sec: {Hits:N0}",counter,_sw.Elapsed.TotalSeconds,hits.Count / _sw.Elapsed.TotalSeconds);    
+                Log.Information("Found {Counter:N0} strings in {TotalSeconds:N3} seconds. Average strings/sec: {Hits:N0}", counter, _sw.Elapsed.TotalSeconds, hits.Count / _sw.Elapsed.TotalSeconds);
             }
-            
+
             globalCounter += counter;
             globalHits += hits.Count;
             globalTimespan += _sw.Elapsed.TotalSeconds;
@@ -806,13 +812,13 @@ internal class Program
 
         if (globalCounter == 1)
         {
-            Log.Information("Total across {FilesCount:N0} files: Found {GlobalCounter:N0} string in {GlobalTimespan:N3} seconds. Average strings/sec: {GlobalAve:N0}",files.Count,globalCounter,globalTimespan,globalHits / globalTimespan);
+            Log.Information("Total across {FilesCount:N0} files: Found {GlobalCounter:N0} string in {GlobalTimespan:N3} seconds. Average strings/sec: {GlobalAve:N0}", files.Count, globalCounter, globalTimespan, globalHits / globalTimespan);
         }
         else
         {
-            Log.Information("Total across {FilesCount:N0} files: Found {GlobalCounter:N0} strings in {GlobalTimespan:N3} seconds. Average strings/sec: {GlobalAve:N0}",files.Count,globalCounter,globalTimespan,globalHits / globalTimespan);    
+            Log.Information("Total across {FilesCount:N0} files: Found {GlobalCounter:N0} strings in {GlobalTimespan:N3} seconds. Average strings/sec: {GlobalAve:N0}", files.Count, globalCounter, globalTimespan, globalHits / globalTimespan);
         }
-        
+
         Console.WriteLine();
     }
 
@@ -1113,6 +1119,4 @@ internal class Program
 
         return hits;
     }
-
-   
 }
