@@ -29,6 +29,8 @@ using Path = Alphaleonis.Win32.Filesystem.Path;
 #else
 using Path = System.IO.Path;
 using Directory = System.IO.Directory;
+using File = System.IO.File;
+using FileInfo = System.IO.FileInfo;
 #endif
 
 namespace bstrings;
@@ -181,7 +183,7 @@ internal class Program
             new Option<bool>(
                 "--sl",
                 () => false,
-                "When true, use LF vs CRLF for Sort results by length"),
+                "Sort results by length"),
 
             new Option<bool>(
                 "--debug",
