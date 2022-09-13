@@ -133,10 +133,6 @@ internal class Program
                 "File containing strings to look for. When set, only matching strings are returned"),
 
             new Option<string>(
-                "--fr",
-                "Directory to save bodyfile formatted results to. --bdl is also required when using this option"),
-
-            new Option<string>(
                 "--ar",
                 () => "[\x20-\x7E]",
                 @"Range of characters to search for in 'Code page' strings. Specify as a range of characters in hex format and enclose in quotes. Default is [\x20 -\x7E]"),
