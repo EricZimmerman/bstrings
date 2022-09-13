@@ -144,7 +144,7 @@ internal class Program
             new Option<string>(
                 "--ur",
                 () => "[\u0020-\u007E]",
-                @"Range of characters to search for in 'Code page' strings. Specify as a range of characters in hex format and enclose in quotes. Default is [\x20 -\x7E]"),
+                @"Range of characters to search for in Unicode strings. Specify as a range of characters in hex format and enclose in quotes. Default is [\\u0020-\\u007E]"),
 
             new Option<int>(
                 "--cp",
