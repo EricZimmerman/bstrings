@@ -158,7 +158,7 @@ internal class Program
             new Option<int>(
                 "--ms",
                 () => -1,
-                "When using -d, maximum file size to process. This option has no effect when using -f"),
+                "When using -d, maximum file size in bytes to process. This option has no effect when using -f"),
 
             new Option<bool>(
                 "--ro",
