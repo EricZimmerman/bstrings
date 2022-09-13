@@ -49,7 +49,7 @@ internal class Program
 
     private static readonly string Footer = @"Examples: bstrings.exe -f ""C:\Temp\UsrClass 1.dat"" --ls URL" + "\r\n\t " +
                                             @"   bstrings.exe -f ""C:\Temp\someFile.txt"" --lr guid" + "\r\n\t " +
-                                            @"   bstrings.exe -f ""C:\Temp\aBigFile.bin"" --fs c:\temp\searchStrings.txt --fr c:\temp\searchRegex.txt -s" +
+                                            @"   bstrings.exe -f ""C:\Temp\aBigFile.bin"" --fs c:\temp\searchStrings.txt --fr c:\temp\searchRegex.txt" +
                                             "\r\n\t " +
                                             @"   bstrings.exe -d ""C:\Temp"" --mask ""*.dll""" + "\r\n\t " +
                                             @"   bstrings.exe -d ""C:\Temp"" --ar ""[\x20-\x37]""" + "\r\n\t " +
@@ -110,11 +110,6 @@ internal class Program
                 () => false,
                 "Quiet mode (Do not show header or total number of hits)"),
 
-            new Option<bool>(
-                "-s",
-                () => false,
-                "Really Quiet mode (Do not display hits to console. Speeds up processing when using -o)"),
-
             new Option<int>(
                 "-x",
                 () => -1,
@@ -139,8 +134,8 @@ internal class Program
 
             new Option<string>(
                 "--fr",
-                "Directory to save bodyfile formatted results to. --bdl is also required when using this option"),
-
+                "File containing regex patterns to look for. When set, only strings matching regex patterns are returned"),
+		
             new Option<string>(
                 "--ar",
                 () => "[\x20-\x7E]",
@@ -149,7 +144,7 @@ internal class Program
             new Option<string>(
                 "--ur",
                 () => "[\u0020-\u007E]",
-                @"Range of characters to search for in 'Code page' strings. Specify as a range of characters in hex format and enclose in quotes. Default is [\x20 -\x7E]"),
+                @"Range of characters to search for in Unicode strings. Specify as a range of characters in hex format and enclose in quotes. Default is [\\u0020-\\u007E]"),
 
             new Option<int>(
                 "--cp",
@@ -163,7 +158,7 @@ internal class Program
             new Option<int>(
                 "--ms",
                 () => -1,
-                "When using -d, maximum file size to process. This option has no effect when using -f"),
+                "When using -d, maximum file size in bytes to process. This option has no effect when using -f"),
 
             new Option<bool>(
                 "--ro",
