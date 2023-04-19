@@ -324,8 +324,8 @@ internal class Program
 
         if (string.IsNullOrEmpty(o) == false && o.Length > 0)
         {
-            o = o.TrimEnd('\\');
-
+            o = Path.GetFullPath(o).TrimEnd('\\');
+            
             var dir = Path.GetDirectoryName(o);
 
             if (dir != null && Directory.Exists(dir) == false)
