@@ -135,7 +135,7 @@ internal class Program
             new Option<string>(
                 "--fr",
                 "File containing regex patterns to look for. When set, only strings matching regex patterns are returned"),
-		
+
             new Option<string>(
                 "--ar",
                 () => "[\x20-\x7E]",
@@ -325,7 +325,7 @@ internal class Program
         if (string.IsNullOrEmpty(o) == false && o.Length > 0)
         {
             o = Path.GetFullPath(o).TrimEnd('\\');
-            
+
             var dir = Path.GetDirectoryName(o);
 
             if (dir != null && Directory.Exists(dir) == false)
@@ -368,6 +368,7 @@ internal class Program
             if (File.Exists(file) == false)
             {
                 Log.Warning("'{File}' does not exist! Skipping", file);
+                continue;
             }
 
             _sw = new Stopwatch();
