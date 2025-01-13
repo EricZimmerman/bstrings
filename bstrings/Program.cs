@@ -1,4 +1,15 @@
-﻿using System;
+﻿#if !NET6_0_OR_GREATER
+using Directory = Alphaleonis.Win32.Filesystem.Directory;
+using File = Alphaleonis.Win32.Filesystem.File;
+using FileInfo = Alphaleonis.Win32.Filesystem.FileInfo;
+using Path = Alphaleonis.Win32.Filesystem.Path;
+#else
+using Path = System.IO.Path;
+using Directory = System.IO.Directory;
+using File = System.IO.File;
+using FileInfo = System.IO.FileInfo;
+#endif
+using System;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Help;
@@ -11,7 +22,6 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Alphaleonis.Win32.Filesystem;
 using DiscUtils;
 using DiscUtils.Ntfs;
 using DiscUtils.Streams;
@@ -20,18 +30,6 @@ using RawDiskLib;
 using Serilog;
 using Serilog.Core;
 using Serilog.Events;
-#if !NET6_0
-using Directory = Alphaleonis.Win32.Filesystem.Directory;
-using File = Alphaleonis.Win32.Filesystem.File;
-using FileInfo = Alphaleonis.Win32.Filesystem.FileInfo;
-using Path = Alphaleonis.Win32.Filesystem.Path;
-
-#else
-using Path = System.IO.Path;
-using Directory = System.IO.Directory;
-using File = System.IO.File;
-using FileInfo = System.IO.FileInfo;
-#endif
 
 namespace bstrings;
 
@@ -448,8 +446,8 @@ internal class Program
                 {
                     FileStream fileStream;
 
-#if NET6_0
-                        fileStream = File.Open(file, FileMode.Open, FileAccess.Read, FileShare.Read);
+#if NET6_0_OR_GREATER
+                    fileStream = File.Open(file, FileMode.Open, FileAccess.Read, FileShare.Read);
 #else
                     fileStream =
                         File.Open(File.GetFileSystemEntryInfo(file).LongFullPath, FileMode.Open, FileAccess.Read,
