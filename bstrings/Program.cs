@@ -1,4 +1,4 @@
-﻿#if !NET6_0_OR_GREATER
+#if !NET6_0_OR_GREATER
 using Directory = Alphaleonis.Win32.Filesystem.Directory;
 using File = Alphaleonis.Win32.Filesystem.File;
 using FileInfo = Alphaleonis.Win32.Filesystem.FileInfo;
@@ -406,7 +406,32 @@ internal class Program
                 : b;
             var chunkSizeBytes = chunkSizeMb * 1024 * 1024;
 
+            // ####################### EDITED #######################
             var fileSizeBytes = new FileInfo(file).Length;
+            if (file == "/dev/stdin")
+            {
+                // Define the file where input data will be saved
+                string filePath = "/tmp/stdin.txt";  // Adjust this path as needed
+
+                // Open the standard input stream (stdin)
+                using (Stream stdinStream = Console.OpenStandardInput())
+                {
+                    // Open a FileStream to write data to the file
+                    using (FileStream fileStream2 = new FileStream(filePath, FileMode.Create, FileAccess.Write))
+                    {
+                        byte[] buffer = new byte[1024]; // Define buffer size (1KB)
+                        int bytesRead;
+
+                        // Read from stdin and write to the file
+                        while ((bytesRead = stdinStream.Read(buffer, 0, buffer.Length)) > 0)
+                        {
+                            fileStream2.Write(buffer, 0, bytesRead);
+                        }
+                    }
+                }
+                fileSizeBytes = new FileInfo("/tmp/stdin.txt").Length;
+            }
+            // ####################### EDITED #######################
 
             if (ms > 0)
             {
@@ -447,13 +472,23 @@ internal class Program
                     FileStream fileStream;
 
 #if NET6_0_OR_GREATER
-                    fileStream = File.Open(file, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+                    // ####################### EDITED #######################
+                    if (file == "/dev/stdin")
+                    {
+                        fileStream = File.Open("/tmp/stdin.txt", FileMode.Open, FileAccess.Read, FileShare.Read);
+                    }
+                    else
+                    {
+                        fileStream = File.Open(file, FileMode.Open, FileAccess.Read, FileShare.Read);
+                    }
+                    // ####################### EDITED #######################
+
 #else
                     fileStream =
                         File.Open(File.GetFileSystemEntryInfo(file).LongFullPath, FileMode.Open, FileAccess.Read,
                             FileShare.Read, PathFormat.LongFullPath);
 #endif
-
                     mappedStream = MappedStream.FromStream(fileStream, Ownership.None);
                 }
                 catch (Exception)
