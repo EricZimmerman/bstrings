@@ -246,40 +246,67 @@ internal class Program
             return;
         }
 
-        if (string.IsNullOrEmpty(f) && string.IsNullOrEmpty(d))
+        // ########################### EDITED ###########################
+        var files = new List<string>();
+        // Check if input is redirected (i.e., piped in)
+        if (Console.IsInputRedirected && !string.IsNullOrEmpty(f) || !string.IsNullOrEmpty(d))
         {
-            var helpBld = new HelpBuilder(LocalizationResources.Instance, Console.WindowWidth);
-            var hc = new HelpContext(helpBld, _rootCommand, Console.Out);
-
-            helpBld.Write(hc);
-
-            Log.Warning("Either -f or -d is required. Exiting");
+            Console.Write("input from stdin or file\n");
             return;
-        }
-
-        if (string.IsNullOrEmpty(f) == false &&
-            !File.Exists(f) &&
-            mask?.Length == 0)
+        } else if (Console.IsInputRedirected)
         {
-            Log.Warning("File '{F}' not found. Exiting", f);
-            return;
-        }
-
-        if (string.IsNullOrEmpty(d) == false &&
-            !Directory.Exists(d) &&
-            mask?.Length == 0)
+            // Generate a temporary file path
+            string tempFilePath = Path.GetTempFileName();  // Creates a unique temporary file
+            // Open the stdin stream
+            using (var stdinStream = Console.OpenStandardInput())
+            {
+                // Open the temporary file for writing using FileStream
+                using (var tempFileStream = new FileStream(tempFilePath, FileMode.Create, FileAccess.Write))
+                {
+                    byte[] buffer = new byte[4096];  // Buffer for reading from stdin
+                    int bytesRead;
+                    // Read from stdin and write to the temporary file
+                    while ((bytesRead = stdinStream.Read(buffer, 0, buffer.Length)) > 0)
+                    {
+                        tempFileStream.Write(buffer, 0, bytesRead);
+                    }
+                }
+            }
+            f = tempFilePath;
+        } else if (!Console.IsInputRedirected)
         {
-            Log.Warning("Directory '{D}' not found. Exiting", d);
-            return;
+            if (string.IsNullOrEmpty(f) && string.IsNullOrEmpty(d))
+            {
+                var helpBld = new HelpBuilder(LocalizationResources.Instance, Console.WindowWidth);
+                var hc = new HelpContext(helpBld, _rootCommand, Console.Out);
+
+                helpBld.Write(hc);
+
+                Log.Warning("Either -f or -d is required. Exiting");
+                return;
+            }
+            if (string.IsNullOrEmpty(f) == false &&
+                !File.Exists(f) &&
+                mask?.Length == 0)
+            {
+                Log.Warning("File '{F}' not found. Exiting", f);
+                return;
+            }
+            if (string.IsNullOrEmpty(d) == false &&
+                !Directory.Exists(d) &&
+                mask?.Length == 0)
+            {
+                Log.Warning("Directory '{D}' not found. Exiting", d);
+                return;
+            }
         }
+        // ########################### EDITED ###########################
 
         if (!q)
         {
             Log.Information("{Header}", Header);
             Console.WriteLine();
         }
-
-        var files = new List<string>();
 
         if (string.IsNullOrEmpty(f) == false)
         {
@@ -406,32 +433,7 @@ internal class Program
                 : b;
             var chunkSizeBytes = chunkSizeMb * 1024 * 1024;
 
-            // ####################### EDITED #######################
             var fileSizeBytes = new FileInfo(file).Length;
-            if (file == "/dev/stdin")
-            {
-                // Define the file where input data will be saved
-                string filePath = "/tmp/stdin.txt";  // Adjust this path as needed
-
-                // Open the standard input stream (stdin)
-                using (Stream stdinStream = Console.OpenStandardInput())
-                {
-                    // Open a FileStream to write data to the file
-                    using (FileStream fileStream2 = new FileStream(filePath, FileMode.Create, FileAccess.Write))
-                    {
-                        byte[] buffer = new byte[1024]; // Define buffer size (1KB)
-                        int bytesRead;
-
-                        // Read from stdin and write to the file
-                        while ((bytesRead = stdinStream.Read(buffer, 0, buffer.Length)) > 0)
-                        {
-                            fileStream2.Write(buffer, 0, bytesRead);
-                        }
-                    }
-                }
-                fileSizeBytes = new FileInfo("/tmp/stdin.txt").Length;
-            }
-            // ####################### EDITED #######################
 
             if (ms > 0)
             {
@@ -470,20 +472,8 @@ internal class Program
                 try
                 {
                     FileStream fileStream;
-
 #if NET6_0_OR_GREATER
-
-                    // ####################### EDITED #######################
-                    if (file == "/dev/stdin")
-                    {
-                        fileStream = File.Open("/tmp/stdin.txt", FileMode.Open, FileAccess.Read, FileShare.Read);
-                    }
-                    else
-                    {
-                        fileStream = File.Open(file, FileMode.Open, FileAccess.Read, FileShare.Read);
-                    }
-                    // ####################### EDITED #######################
-
+                    fileStream = File.Open(file, FileMode.Open, FileAccess.Read, FileShare.Read);
 #else
                     fileStream =
                         File.Open(File.GetFileSystemEntryInfo(file).LongFullPath, FileMode.Open, FileAccess.Read,
