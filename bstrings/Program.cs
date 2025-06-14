@@ -1,14 +1,3 @@
-#if !NET6_0_OR_GREATER
-using Directory = Alphaleonis.Win32.Filesystem.Directory;
-using File = Alphaleonis.Win32.Filesystem.File;
-using FileInfo = Alphaleonis.Win32.Filesystem.FileInfo;
-using Path = Alphaleonis.Win32.Filesystem.Path;
-#else
-using Path = System.IO.Path;
-using Directory = System.IO.Directory;
-using File = System.IO.File;
-using FileInfo = System.IO.FileInfo;
-#endif
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
@@ -22,6 +11,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Alphaleonis.Win32.Filesystem;
 using DiscUtils;
 using DiscUtils.Ntfs;
 using DiscUtils.Streams;
@@ -30,6 +20,17 @@ using RawDiskLib;
 using Serilog;
 using Serilog.Core;
 using Serilog.Events;
+#if !NET6_0_OR_GREATER
+using Directory = Alphaleonis.Win32.Filesystem.Directory;
+using File = Alphaleonis.Win32.Filesystem.File;
+using FileInfo = Alphaleonis.Win32.Filesystem.FileInfo;
+using Path = Alphaleonis.Win32.Filesystem.Path;
+#else
+using Path = System.IO.Path;
+using Directory = System.IO.Directory;
+using File = System.IO.File;
+using FileInfo = System.IO.FileInfo;
+#endif
 
 namespace bstrings;
 
@@ -45,7 +46,8 @@ internal class Program
         "\r\n\r\nAuthor: Eric Zimmerman (saericzimmerman@gmail.com)" +
         "\r\nhttps://github.com/EricZimmerman/bstrings";
 
-    private static readonly string Footer = @"Examples: bstrings.exe -f ""C:\Temp\UsrClass 1.dat"" --ls URL" + "\r\n\t " +
+    private static readonly string Footer = @"Examples: bstrings.exe -f ""C:\Temp\UsrClass 1.dat"" --ls URL" +
+                                            "\r\n\t " +
                                             @"   bstrings.exe -f ""C:\Temp\someFile.txt"" --lr guid" + "\r\n\t " +
                                             @"   bstrings.exe -f ""C:\Temp\aBigFile.bin"" --fs c:\temp\searchStrings.txt --fr c:\temp\searchRegex.txt" +
                                             "\r\n\t " +
@@ -53,8 +55,10 @@ internal class Program
                                             @"   bstrings.exe -d ""C:\Temp"" --ar ""[\x20-\x37]""" + "\r\n\t " +
                                             @"   bstrings.exe -d ""C:\Temp"" --cp 10007" + "\r\n\t " +
                                             @"   bstrings.exe -d ""C:\Temp"" --ls test" + "\r\n\t " +
-                                            @"   bstrings.exe -f ""C:\Temp\someOtherFile.txt"" --lr cc --sa" + "\r\n\t " +
-                                            @"   bstrings.exe -f ""C:\Temp\someOtherFile.txt"" --lr cc --sa -m 15 -x 22" + "\r\n\t " +
+                                            @"   bstrings.exe -f ""C:\Temp\someOtherFile.txt"" --lr cc --sa" +
+                                            "\r\n\t " +
+                                            @"   bstrings.exe -f ""C:\Temp\someOtherFile.txt"" --lr cc --sa -m 15 -x 22" +
+                                            "\r\n\t " +
                                             @"   bstrings.exe -f ""C:\Temp\UsrClass 1.dat"" --ls mui --sl";
 
     private static RootCommand _rootCommand;
@@ -107,6 +111,11 @@ internal class Program
                 "-q",
                 () => false,
                 "Quiet mode (Do not show header or total number of hits)"),
+
+            new Option<bool>(
+                "-s",
+                () => false,
+                "Really Quiet mode (Do not display hits to console. Speeds up processing when using -o)"),
 
             new Option<int>(
                 "-x",
@@ -198,7 +207,9 @@ internal class Program
         Log.CloseAndFlush();
     }
 
-    private static void DoWork(string f, string d, string o, bool a, bool u, int m, int b, bool q, bool s, int x, bool p, string ls, string lr, string fs, string fr, string ar, string ur, int cp, string mask, int ms, bool ro, bool off, bool sa, bool sl, bool debug, bool trace)
+    private static void DoWork(string f, string d, string o, bool a, bool u, int m, int b, bool q, bool s, int x,
+        bool p, string ls, string lr, string fs, string fr, string ar, string ur, int cp, string mask, int ms, bool ro,
+        bool off, bool sa, bool sl, bool debug, bool trace)
     {
         var levelSwitch = new LoggingLevelSwitch();
 
@@ -242,7 +253,9 @@ internal class Program
 
         if (cpTest == null)
         {
-            Log.Warning("Invalid codepage: '{Cp}'. Use the Identifier value for code pages at https://goo.gl/ig6DxW. Verify codepage value and try again", cp);
+            Log.Warning(
+                "Invalid codepage: '{Cp}'. Use the Identifier value for code pages at https://goo.gl/ig6DxW. Verify codepage value and try again",
+                cp);
             return;
         }
 
@@ -253,17 +266,18 @@ internal class Program
         {
             Console.Write("input from stdin or file\n");
             return;
-        } else if (Console.IsInputRedirected)
+        }
+        else if (Console.IsInputRedirected)
         {
             // Generate a temporary file path
-            string tempFilePath = Path.GetTempFileName();  // Creates a unique temporary file
+            string tempFilePath = Path.GetTempFileName(); // Creates a unique temporary file
             // Open the stdin stream
             using (var stdinStream = Console.OpenStandardInput())
             {
                 // Open the temporary file for writing using FileStream
                 using (var tempFileStream = new FileStream(tempFilePath, FileMode.Create, FileAccess.Write))
                 {
-                    byte[] buffer = new byte[4096];  // Buffer for reading from stdin
+                    byte[] buffer = new byte[4096]; // Buffer for reading from stdin
                     int bytesRead;
                     // Read from stdin and write to the temporary file
                     while ((bytesRead = stdinStream.Read(buffer, 0, buffer.Length)) > 0)
@@ -272,8 +286,10 @@ internal class Program
                     }
                 }
             }
+
             f = tempFilePath;
-        } else if (!Console.IsInputRedirected)
+        }
+        else if (!Console.IsInputRedirected)
         {
             if (string.IsNullOrEmpty(f) && string.IsNullOrEmpty(d))
             {
@@ -285,6 +301,7 @@ internal class Program
                 Log.Warning("Either -f or -d is required. Exiting");
                 return;
             }
+
             if (string.IsNullOrEmpty(f) == false &&
                 !File.Exists(f) &&
                 mask?.Length == 0)
@@ -292,6 +309,7 @@ internal class Program
                 Log.Warning("File '{F}' not found. Exiting", f);
                 return;
             }
+
             if (string.IsNullOrEmpty(d) == false &&
                 !Directory.Exists(d) &&
                 mask?.Length == 0)
@@ -454,11 +472,15 @@ internal class Program
             {
                 if (totalChunks == 1)
                 {
-                    Log.Information("Searching {TotalChunks:N0} chunk ({ChunkSizeMb} MB each) across {SizeReadable} in '{File}'", totalChunks, chunkSizeMb, GetSizeReadable(fileSizeBytes), file);
+                    Log.Information(
+                        "Searching {TotalChunks:N0} chunk ({ChunkSizeMb} MB each) across {SizeReadable} in '{File}'",
+                        totalChunks, chunkSizeMb, GetSizeReadable(fileSizeBytes), file);
                 }
                 else
                 {
-                    Log.Information("Searching {TotalChunks:N0} chunks ({ChunkSizeMb} MB each) across {SizeReadable} in '{File}'", totalChunks, chunkSizeMb, GetSizeReadable(fileSizeBytes), file);
+                    Log.Information(
+                        "Searching {TotalChunks:N0} chunks ({ChunkSizeMb} MB each) across {SizeReadable} in '{File}'",
+                        totalChunks, chunkSizeMb, GetSizeReadable(fileSizeBytes), file);
                 }
 
 
@@ -533,7 +555,9 @@ internal class Program
                         if (!q)
                         {
                             Log.Information(
-                                "Chunk {ChunkIndex:N0} of {TotalChunks:N0} finished. Total strings so far: {HitsCount:N0} Elapsed time: {TotalSeconds:N3} seconds. Average strings/sec: {Speed:N0}", chunkIndex, totalChunks, hits.Count, _sw.Elapsed.TotalSeconds, hits.Count / _sw.Elapsed.TotalSeconds);
+                                "Chunk {ChunkIndex:N0} of {TotalChunks:N0} finished. Total strings so far: {HitsCount:N0} Elapsed time: {TotalSeconds:N3} seconds. Average strings/sec: {Speed:N0}",
+                                chunkIndex, totalChunks, hits.Count, _sw.Elapsed.TotalSeconds,
+                                hits.Count / _sw.Elapsed.TotalSeconds);
                         }
 
                         chunkIndex += 1;
@@ -768,7 +792,8 @@ internal class Program
                         }
                         catch (Exception ex)
                         {
-                            Log.Error(ex, "Error setting up regular expression '{RegString}': {Message}", regString, ex.Message);
+                            Log.Error(ex, "Error setting up regular expression '{RegString}': {Message}", regString,
+                                ex.Message);
                         }
                     }
                 }
@@ -802,11 +827,15 @@ internal class Program
 
             if (counter == 1)
             {
-                Log.Information("Found {Counter:N0} string in {TotalSeconds:N3} seconds. Average strings/sec: {Hits:N0}", counter, _sw.Elapsed.TotalSeconds, hits.Count / _sw.Elapsed.TotalSeconds);
+                Log.Information(
+                    "Found {Counter:N0} string in {TotalSeconds:N3} seconds. Average strings/sec: {Hits:N0}", counter,
+                    _sw.Elapsed.TotalSeconds, hits.Count / _sw.Elapsed.TotalSeconds);
             }
             else
             {
-                Log.Information("Found {Counter:N0} strings in {TotalSeconds:N3} seconds. Average strings/sec: {Hits:N0}", counter, _sw.Elapsed.TotalSeconds, hits.Count / _sw.Elapsed.TotalSeconds);
+                Log.Information(
+                    "Found {Counter:N0} strings in {TotalSeconds:N3} seconds. Average strings/sec: {Hits:N0}", counter,
+                    _sw.Elapsed.TotalSeconds, hits.Count / _sw.Elapsed.TotalSeconds);
             }
 
             globalCounter += counter;
@@ -814,7 +843,8 @@ internal class Program
             globalTimespan += _sw.Elapsed.TotalSeconds;
             if (files.Count > 1)
             {
-                Log.Information("-------------------------------------------------------------------------------------");
+                Log.Information(
+                    "-------------------------------------------------------------------------------------");
                 Console.WriteLine();
             }
         }
@@ -833,11 +863,15 @@ internal class Program
 
         if (globalCounter == 1)
         {
-            Log.Information("Total across {FilesCount:N0} files: Found {GlobalCounter:N0} string in {GlobalTimespan:N3} seconds. Average strings/sec: {GlobalAve:N0}", files.Count, globalCounter, globalTimespan, globalHits / globalTimespan);
+            Log.Information(
+                "Total across {FilesCount:N0} files: Found {GlobalCounter:N0} string in {GlobalTimespan:N3} seconds. Average strings/sec: {GlobalAve:N0}",
+                files.Count, globalCounter, globalTimespan, globalHits / globalTimespan);
         }
         else
         {
-            Log.Information("Total across {FilesCount:N0} files: Found {GlobalCounter:N0} strings in {GlobalTimespan:N3} seconds. Average strings/sec: {GlobalAve:N0}", files.Count, globalCounter, globalTimespan, globalHits / globalTimespan);
+            Log.Information(
+                "Total across {FilesCount:N0} files: Found {GlobalCounter:N0} strings in {GlobalTimespan:N3} seconds. Average strings/sec: {GlobalAve:N0}",
+                files.Count, globalCounter, globalTimespan, globalHits / globalTimespan);
         }
 
         Console.WriteLine();
@@ -967,8 +1001,10 @@ internal class Program
         RegExPatterns.Add("mac", "\\b[0-9A-F]{2}([-:]?)(?:[0-9A-F]{2}\\1){4}[0-9A-F]{2}\\b");
         RegExPatterns.Add("ssn", "\\b(?!000)(?!666)[0-8][0-9]{2}[- ](?!00)[0-9]{2}[- ](?!0000)[0-9]{4}\\b");
         // RegExPatterns.Add("cc","^(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|6(?:011|5[0-9][0-9])[0-9]{12}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|(?:2131|1800|35\\d{3})\\d{11})$");
-        RegExPatterns.Add("cc", @"^[ -]*(?:4[ -]*(?:\d[ -]*){11}(?:(?:\d[ -]*){3})?\d|5[ -]*[1-5](?:[ -]*[0-9]){14}|6[ -]*(?:0[ -]*1[ -]*1|5[ -]*\d[ -]*\d)(?:[ -]*[0-9]){12}|3[ -]*[47](?:[ -]*[0-9]){13}|3[ -]*(?:0[ -]*[0-5]|[68][ -]*[0-9])(?:[ -]*[0-9]){11}|(?:2[ -]*1[ -]*3[ -]*1|1[ -]*8[ -]*0[ -]*0|3[ -]*5(?:[ -]*[0-9]){3})(?:[ -]*[0-9]){11})[ -]*$");
-        RegExPatterns.Add("ipv4", @"\b(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\b");
+        RegExPatterns.Add("cc",
+            @"^[ -]*(?:4[ -]*(?:\d[ -]*){11}(?:(?:\d[ -]*){3})?\d|5[ -]*[1-5](?:[ -]*[0-9]){14}|6[ -]*(?:0[ -]*1[ -]*1|5[ -]*\d[ -]*\d)(?:[ -]*[0-9]){12}|3[ -]*[47](?:[ -]*[0-9]){13}|3[ -]*(?:0[ -]*[0-5]|[68][ -]*[0-9])(?:[ -]*[0-9]){11}|(?:2[ -]*1[ -]*3[ -]*1|1[ -]*8[ -]*0[ -]*0|3[ -]*5(?:[ -]*[0-9]){3})(?:[ -]*[0-9]){11})[ -]*$");
+        RegExPatterns.Add("ipv4",
+            @"\b(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\b");
         RegExPatterns.Add("ipv6", @"(?<![:.\w])(?:[A-F0-9]{1,4}:){7}[A-F0-9]{1,4}(?![:.\w])");
         //         RegExPatterns.Add("email",@"[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?");
         RegExPatterns.Add("email", @"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,6}\b");
