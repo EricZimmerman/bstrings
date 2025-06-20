@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Help;
-using System.CommandLine.NamingConventionBinder;
+using System.CommandLine.Invocation;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -25,6 +25,7 @@ using Directory = Alphaleonis.Win32.Filesystem.Directory;
 using File = Alphaleonis.Win32.Filesystem.File;
 using FileInfo = Alphaleonis.Win32.Filesystem.FileInfo;
 using Path = Alphaleonis.Win32.Filesystem.Path;
+
 #else
 using Path = System.IO.Path;
 using Directory = System.IO.Directory;
@@ -73,136 +74,199 @@ internal class Program
 
         SetupPatterns();
 
+        var fOpt = new Option<string>("-f")
+        {
+            Description = "File to search. Either this or -d is required"
+        };
+
+        var dOpt = new Option<string>("-d")
+        {
+            Description = "Directory to recursively process. Either this or -f is required"
+        };
+
+        var oOpt = new Option<string>("-o")
+        {
+            Description = "File to save results to"
+        };
+
+        var aOpt = new Option<bool>("-a")
+        {
+            Description = "If set, look for ASCII strings. Use -a false to disable",
+            DefaultValueFactory = _ => true
+        };
+
+        var uOpt = new Option<bool>("-a")
+        {
+            Description = "If set, look for Unicode strings. Use -u false to disable",
+            DefaultValueFactory = _ => true
+        };
+
+        var mOpt = new Option<int>("-m")
+        {
+            Description = "Minimum string length",
+            DefaultValueFactory = _ => 3
+        };
+
+        var bOpt = new Option<int>("-b")
+        {
+            Description = "Chunk size in MB. Valid range is 1 to 1024",
+            DefaultValueFactory = _ => 512
+        };
+
+        var qOpt = new Option<bool>("-q")
+        {
+            Description = "Quiet mode (Do not show header or total number of hits)",
+            DefaultValueFactory = _ => false
+        };
+
+        var sOpt = new Option<bool>("-s")
+        {
+            Description = "Really Quiet mode (Do not display hits to console. Speeds up processing when using -o)",
+            DefaultValueFactory = _ => false
+        };
+
+        var xOpt = new Option<int>("-x")
+        {
+            Description = "Maximum string length. Default is unlimited",
+            DefaultValueFactory = _ => -1
+        };
+
+        var pOpt = new Option<bool>("-p")
+        {
+            Description = "Display list of built in regular expressions",
+            DefaultValueFactory = _ => false
+        };
+
+        var lsOpt = new Option<string>("--ls")
+        {
+            Description = "String to look for. When set, only matching strings are returned"
+        };
+
+        var lrOpt = new Option<string>("--lr")
+        {
+            Description = "Regex to look for. When set, only strings matching the regex are returned"
+        };
+
+        var fsOpt = new Option<string>("--fs")
+        {
+            Description = "File containing strings to look for. When set, only matching strings are returned"
+        };
+
+        var frOpt = new Option<string>("--fr")
+        {
+            Description =
+                "File containing regex patterns to look for. When set, only strings matching regex patterns are returned"
+        };
+
+        var arOpt = new Option<string>("--ar")
+        {
+            Description =
+                @"Range of characters to search for in 'Code page' strings. Specify as a range of characters in hex format and enclose in quotes. Default is [\x20 -\x7E]",
+            DefaultValueFactory = _ => "[\x20-\x7E]"
+        };
+
+        var urOpt = new Option<string>("--ur")
+        {
+            Description =
+                @"Range of characters to search for in Unicode strings. Specify as a range of characters in hex format and enclose in quotes. Default is [\\u0020-\\u007E]",
+            DefaultValueFactory = _ => "[\u0020-\u007E]"
+        };
+
+        var cpOpt = new Option<int>("--cp")
+        {
+            Description =
+                "Code page to use. Default is 1252. Use the Identifier value for code pages at https://goo.gl/ig6DxW",
+            DefaultValueFactory = _ => 1252
+        };
+
+        var maskOpt = new Option<string>("--mask")
+        {
+            Description =
+                "When using -d, file mask to search for. * and ? are supported. This option has no effect when using -f"
+        };
+
+        var msOpt = new Option<int>("--ms")
+        {
+            Description =
+                "When using -d, maximum file size in bytes to process. This option has no effect when using -f",
+            DefaultValueFactory = _ => -1
+        };
+
+        var roOpt = new Option<bool>("--ro")
+        {
+            Description =
+                "When true, list the string matched by regex pattern vs string the pattern was found in (This may result in duplicate strings in output. ~ denotes approx. offset)",
+            DefaultValueFactory = _ => false
+        };
+
+        var offOpt = new Option<bool>("--off")
+        {
+            Description = "Show offset to hit after string, followed by the encoding (A=1252, U=Unicode)",
+            DefaultValueFactory = _ => false
+        };
+
+        var saOpt = new Option<bool>("--sa")
+        {
+            Description = "Sort results alphabetically",
+            DefaultValueFactory = _ => false
+        };
+        var slOpt = new Option<bool>("--sl")
+        {
+            Description = "Sort results by length",
+            DefaultValueFactory = _ => false
+        };
+        var debugOpt = new Option<bool>("--debug")
+        {
+            Description = "Show debug information during processing",
+            DefaultValueFactory = _ => false
+        };
+        var traceOpt = new Option<bool>("--trace")
+        {
+            Description = "Show trace information during processing",
+            DefaultValueFactory = _ => false
+        };
+
         _rootCommand = new RootCommand
         {
-            new Option<string>(
-                "-f",
-                "File to search. Either this or -d is required"),
-
-            new Option<string>(
-                "-d",
-                "Directory to recursively process. Either this or -f is required"),
-
-            new Option<string>(
-                "-o",
-                "File to save results to"),
-
-            new Option<bool>(
-                "-a",
-                () => true,
-                "If set, look for ASCII strings. Use -a false to disable"),
-
-            new Option<bool>(
-                "-u",
-                () => true,
-                "If set, look for Unicode strings. Use -u false to disable"),
-
-            new Option<int>(
-                "-m",
-                () => 3,
-                "Minimum string length"),
-
-            new Option<int>(
-                "-b",
-                () => 512,
-                "Chunk size in MB. Valid range is 1 to 1024. Default is 512"),
-
-            new Option<bool>(
-                "-q",
-                () => false,
-                "Quiet mode (Do not show header or total number of hits)"),
-
-            new Option<bool>(
-                "-s",
-                () => false,
-                "Really Quiet mode (Do not display hits to console. Speeds up processing when using -o)"),
-
-            new Option<int>(
-                "-x",
-                () => -1,
-                "Maximum string length. Default is unlimited"),
-
-            new Option<bool>(
-                "-p",
-                () => false,
-                "Display list of built in regular expressions"),
-
-            new Option<string>(
-                "--ls",
-                "String to look for. When set, only matching strings are returned"),
-
-            new Option<string>(
-                "--lr",
-                "Regex to look for. When set, only strings matching the regex are returned"),
-
-            new Option<string>(
-                "--fs",
-                "File containing strings to look for. When set, only matching strings are returned"),
-
-            new Option<string>(
-                "--fr",
-                "File containing regex patterns to look for. When set, only strings matching regex patterns are returned"),
-
-            new Option<string>(
-                "--ar",
-                () => "[\x20-\x7E]",
-                @"Range of characters to search for in 'Code page' strings. Specify as a range of characters in hex format and enclose in quotes. Default is [\x20 -\x7E]"),
-
-            new Option<string>(
-                "--ur",
-                () => "[\u0020-\u007E]",
-                @"Range of characters to search for in Unicode strings. Specify as a range of characters in hex format and enclose in quotes. Default is [\\u0020-\\u007E]"),
-
-            new Option<int>(
-                "--cp",
-                () => 1252,
-                "Code page to use. Default is 1252. Use the Identifier value for code pages at https://goo.gl/ig6DxW"),
-
-            new Option<string>(
-                "--mask",
-                "When using -d, file mask to search for. * and ? are supported. This option has no effect when using -f"),
-
-            new Option<int>(
-                "--ms",
-                () => -1,
-                "When using -d, maximum file size in bytes to process. This option has no effect when using -f"),
-
-            new Option<bool>(
-                "--ro",
-                () => false,
-                "When true, list the string matched by regex pattern vs string the pattern was found in (This may result in duplicate strings in output. ~ denotes approx. offset)"),
-
-            new Option<bool>(
-                "--off",
-                () => false,
-                "Show offset to hit after string, followed by the encoding (A=1252, U=Unicode)"),
-
-            new Option<bool>(
-                "--sa",
-                () => false,
-                "Sort results alphabetically"),
-
-            new Option<bool>(
-                "--sl",
-                () => false,
-                "Sort results by length"),
-
-            new Option<bool>(
-                "--debug",
-                () => false,
-                "Show debug information during processing"),
-
-            new Option<bool>(
-                "--trace",
-                () => false,
-                "Show trace information during processing")
+            fOpt,
+            dOpt,
+            oOpt,
+            aOpt,
+            uOpt,
+            mOpt,
+            bOpt,
+            qOpt,
+            sOpt,
+            xOpt,
+            pOpt,
+            lsOpt,
+            lrOpt,
+            fsOpt,
+            frOpt,
+            arOpt,
+            urOpt,
+            cpOpt,
+            maskOpt,
+            msOpt,
+            roOpt,
+            offOpt,
+            saOpt,
+            slOpt,
+            debugOpt,
+            traceOpt
         };
 
         _rootCommand.Description = Header + "\r\n\r\n" + Footer;
 
-        _rootCommand.Handler = CommandHandler.Create(DoWork);
+        _rootCommand.SetAction(result => DoWork(result.GetValue(fOpt), result.GetValue(dOpt), result.GetValue(oOpt),
+            result.GetValue(aOpt), result.GetValue(uOpt), result.GetValue(mOpt), result.GetValue(bOpt),
+            result.GetValue(qOpt), result.GetValue(sOpt), result.GetValue(xOpt), result.GetValue(pOpt),
+            result.GetValue(lsOpt), result.GetValue(lrOpt), result.GetValue(fsOpt), result.GetValue(frOpt),
+            result.GetValue(arOpt), result.GetValue(urOpt), result.GetValue(cpOpt), result.GetValue(maskOpt),
+            result.GetValue(msOpt), result.GetValue(roOpt), result.GetValue(offOpt), result.GetValue(saOpt),
+            result.GetValue(slOpt), result.GetValue(debugOpt), result.GetValue(traceOpt)));
 
-        await _rootCommand.InvokeAsync(args);
+        await new CommandLineConfiguration(_rootCommand).InvokeAsync(args);
 
         Log.CloseAndFlush();
     }
@@ -267,17 +331,18 @@ internal class Program
             Console.Write("input from stdin or file\n");
             return;
         }
-        else if (Console.IsInputRedirected)
+
+        if (Console.IsInputRedirected)
         {
             // Generate a temporary file path
-            string tempFilePath = Path.GetTempFileName(); // Creates a unique temporary file
+            var tempFilePath = Path.GetTempFileName(); // Creates a unique temporary file
             // Open the stdin stream
             using (var stdinStream = Console.OpenStandardInput())
             {
                 // Open the temporary file for writing using FileStream
                 using (var tempFileStream = new FileStream(tempFilePath, FileMode.Create, FileAccess.Write))
                 {
-                    byte[] buffer = new byte[4096]; // Buffer for reading from stdin
+                    var buffer = new byte[4096]; // Buffer for reading from stdin
                     int bytesRead;
                     // Read from stdin and write to the temporary file
                     while ((bytesRead = stdinStream.Read(buffer, 0, buffer.Length)) > 0)
@@ -293,10 +358,8 @@ internal class Program
         {
             if (string.IsNullOrEmpty(f) && string.IsNullOrEmpty(d))
             {
-                var helpBld = new HelpBuilder(LocalizationResources.Instance, Console.WindowWidth);
-                var hc = new HelpContext(helpBld, _rootCommand, Console.Out);
-
-                helpBld.Write(hc);
+                var aaa = new CustomHelpAction(new HelpAction());
+                aaa.Invoke(null!);
 
                 Log.Warning("Either -f or -d is required. Exiting");
                 return;
@@ -1175,5 +1238,24 @@ internal class Program
         }
 
         return hits;
+    }
+
+    private class CustomHelpAction : SynchronousCommandLineAction
+    {
+        private readonly HelpAction _defaultHelp;
+
+        public CustomHelpAction(HelpAction action)
+        {
+            _defaultHelp = action;
+        }
+
+        public override int Invoke(ParseResult parseResult)
+        {
+            var result = _defaultHelp.Invoke(parseResult);
+
+            Log.Warning("Either -f or -d is required. Exiting");
+
+            return result;
+        }
     }
 }
