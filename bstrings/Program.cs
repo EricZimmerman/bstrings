@@ -266,7 +266,10 @@ internal class Program
             result.GetValue(msOpt), result.GetValue(roOpt), result.GetValue(offOpt), result.GetValue(saOpt),
             result.GetValue(slOpt), result.GetValue(debugOpt), result.GetValue(traceOpt)));
 
-        await new CommandLineConfiguration(_rootCommand).InvokeAsync(args);
+        //await new CommandLineConfiguration(_rootCommand).InvokeAsync(args);
+
+        var foo = _rootCommand.Parse(args).InvokeAsync();
+
 
         Log.CloseAndFlush();
     }
@@ -326,7 +329,7 @@ internal class Program
         // ########################### EDITED ###########################
         var files = new List<string>();
         // Check if input is redirected (i.e., piped in)
-        if (Console.IsInputRedirected && !string.IsNullOrEmpty(f) || !string.IsNullOrEmpty(d))
+        if (Console.IsInputRedirected && (!string.IsNullOrEmpty(f) || !string.IsNullOrEmpty(d)))
         {
             Console.Write("input from stdin or file\n");
             return;
@@ -359,9 +362,9 @@ internal class Program
             if (string.IsNullOrEmpty(f) && string.IsNullOrEmpty(d))
             {
                 var aaa = new CustomHelpAction(new HelpAction());
-                aaa.Invoke(null!);
+                aaa.Invoke(_rootCommand.Parse(""));
 
-                Log.Warning("Either -f or -d is required. Exiting");
+                //Log.Warning("Either -f or -d is required. Exiting");
                 return;
             }
 
