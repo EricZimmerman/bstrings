@@ -699,8 +699,6 @@ internal class Program
                 Log.Error(ex, "Error: {Message}", ex.Message);
             }
 
-            _sw.Stop();
-
             if (!q)
             {
                 Log.Information("Search complete.");
@@ -882,6 +880,7 @@ internal class Program
                 continue;
             }
 
+            _sw.Stop();
 
             Console.WriteLine();
 
