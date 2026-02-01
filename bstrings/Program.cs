@@ -769,6 +769,18 @@ internal class Program
                 //  AddHighlightingRules(regexStrings.ToList(), true);
             }
 
+            var regexList = new List<Regex>();
+            foreach (var regString in regexStrings.Where(x => x.Length > 0))
+            {
+                try
+                {
+                    regexList.Add(new Regex(regString, RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace));
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "Error setting up regular expression '{RegString}': {Message}", regString, ex.Message);
+                }
+            }
 
             if (!q)
             {
@@ -783,7 +795,7 @@ internal class Program
                     continue;
                 }
 
-                if (fileStrings.Count > 0 || regexStrings.Count > 0)
+                if (fileStrings.Count > 0 || regexList.Count > 0)
                 {
                     foreach (var fileString in fileStrings)
                     {
@@ -813,51 +825,35 @@ internal class Program
                         hitOffset = $"~{hit.Split('\t').Last()}";
                     }
 
-                    foreach (var regString in regexStrings)
+                    foreach (var regex in regexList)
                     {
-                        if (regString.Trim().Length == 0)
+                        if (regex.IsMatch(hit) == false)
                         {
                             continue;
                         }
 
-                        try
+                        counter += 1;
+
+                        if (ro)
                         {
-                            var reg1 = new Regex(regString,
-                                RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
-
-                            if (reg1.IsMatch(hit) == false)
-                            {
-                                continue;
-                            }
-
-                            counter += 1;
-
-                            if (ro)
-                            {
-                                foreach (var match in reg1.Matches(hit))
-                                {
-                                    if (s == false)
-                                    {
-                                        Log.Information("{Match}\t{HitOffset}", match, hitOffset);
-                                    }
-
-                                    sw?.WriteLine($"{match}\t{hitOffset}");
-                                }
-                            }
-                            else
+                            foreach (var match in regex.Matches(hit))
                             {
                                 if (s == false)
                                 {
-                                    Log.Information("{Hit}", hit);
+                                    Log.Information("{Match}\t{HitOffset}", match, hitOffset);
                                 }
 
-                                sw?.WriteLine(hit);
+                                sw?.WriteLine($"{match}\t{hitOffset}");
                             }
                         }
-                        catch (Exception ex)
+                        else
                         {
-                            Log.Error(ex, "Error setting up regular expression '{RegString}': {Message}", regString,
-                                ex.Message);
+                            if (s == false)
+                            {
+                                Log.Information("{Hit}", hit);
+                            }
+
+                            sw?.WriteLine(hit);
                         }
                     }
                 }
