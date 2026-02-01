@@ -827,33 +827,40 @@ internal class Program
 
                     foreach (var regex in regexList)
                     {
-                        if (regex.IsMatch(hit) == false)
+                        try
                         {
-                            continue;
-                        }
+                            if (regex.IsMatch(hit) == false)
+                            {
+                                continue;
+                            }
 
-                        counter += 1;
+                            counter += 1;
 
-                        if (ro)
-                        {
-                            foreach (var match in regex.Matches(hit))
+                            if (ro)
+                            {
+                                foreach (var match in regex.Matches(hit))
+                                {
+                                    if (s == false)
+                                    {
+                                        Log.Information("{Match}\t{HitOffset}", match, hitOffset);
+                                    }
+
+                                    sw?.WriteLine($"{match}\t{hitOffset}");
+                                }
+                            }
+                            else
                             {
                                 if (s == false)
                                 {
-                                    Log.Information("{Match}\t{HitOffset}", match, hitOffset);
+                                    Log.Information("{Hit}", hit);
                                 }
 
-                                sw?.WriteLine($"{match}\t{hitOffset}");
+                                sw?.WriteLine(hit);
                             }
                         }
-                        else
+                        catch (Exception ex)
                         {
-                            if (s == false)
-                            {
-                                Log.Information("{Hit}", hit);
-                            }
-
-                            sw?.WriteLine(hit);
+                            Log.Error(ex, "Error setting up regular expression '{RegString}': {Message}", regex.ToString(), ex.Message);
                         }
                     }
                 }
