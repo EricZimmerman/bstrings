@@ -699,8 +699,6 @@ internal class Program
                 Log.Error(ex, "Error: {Message}", ex.Message);
             }
 
-            _sw.Stop();
-
             if (!q)
             {
                 Log.Information("Search complete.");
@@ -771,6 +769,18 @@ internal class Program
                 //  AddHighlightingRules(regexStrings.ToList(), true);
             }
 
+            var regexList = new List<Regex>();
+            foreach (var regString in regexStrings.Where(x => x.Length > 0))
+            {
+                try
+                {
+                    regexList.Add(new Regex(regString, RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace));
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "Error setting up regular expression '{RegString}': {Message}", regString, ex.Message);
+                }
+            }
 
             if (!q)
             {
@@ -785,7 +795,7 @@ internal class Program
                     continue;
                 }
 
-                if (fileStrings.Count > 0 || regexStrings.Count > 0)
+                if (fileStrings.Count > 0 || regexList.Count > 0)
                 {
                     foreach (var fileString in fileStrings)
                     {
@@ -815,19 +825,11 @@ internal class Program
                         hitOffset = $"~{hit.Split('\t').Last()}";
                     }
 
-                    foreach (var regString in regexStrings)
+                    foreach (var regex in regexList)
                     {
-                        if (regString.Trim().Length == 0)
-                        {
-                            continue;
-                        }
-
                         try
                         {
-                            var reg1 = new Regex(regString,
-                                RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
-
-                            if (reg1.IsMatch(hit) == false)
+                            if (regex.IsMatch(hit) == false)
                             {
                                 continue;
                             }
@@ -836,7 +838,7 @@ internal class Program
 
                             if (ro)
                             {
-                                foreach (var match in reg1.Matches(hit))
+                                foreach (var match in regex.Matches(hit))
                                 {
                                     if (s == false)
                                     {
@@ -858,8 +860,7 @@ internal class Program
                         }
                         catch (Exception ex)
                         {
-                            Log.Error(ex, "Error setting up regular expression '{RegString}': {Message}", regString,
-                                ex.Message);
+                            Log.Error(ex, "Error setting up regular expression '{RegString}': {Message}", regex.ToString(), ex.Message);
                         }
                     }
                 }
@@ -882,6 +883,7 @@ internal class Program
                 continue;
             }
 
+            _sw.Stop();
 
             Console.WriteLine();
 
