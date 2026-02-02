@@ -654,7 +654,7 @@ internal class Program
 
                         var chunk = new byte[boundaryChunkSize];
 
-                        mappedStream.Position = offset - boundaryChunkSize / 2;
+                        mappedStream.Position = offset;
                         mappedStream.Read(chunk, 0, boundaryChunkSize);
 
                         if (u)
