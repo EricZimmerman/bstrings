@@ -532,7 +532,7 @@ internal class Program
             long offset = 0;
 
             var chunkIndex = 1;
-            var totalChunks = fileSizeBytes / chunkSizeBytes + 1;
+            var totalChunks = (fileSizeBytes + chunkSizeBytes - 1) / chunkSizeBytes;
 
             if (!q)
             {
