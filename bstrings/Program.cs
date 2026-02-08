@@ -654,6 +654,7 @@ internal class Program
 
                         var chunk = new byte[boundaryChunkSize];
 
+                        mappedStream.Position = offset;
                         mappedStream.Read(chunk, 0, boundaryChunkSize);
 
                         if (u)
@@ -665,10 +666,7 @@ internal class Program
                                 hits.Add("  " + h);
                             }
 
-                            if (withBoundaryHits == false && uh.Count > 0)
-                            {
-                                withBoundaryHits = uh.Count > 0;
-                            }
+                            withBoundaryHits |= uh.Count > 0;
                         }
 
                         if (a)
@@ -680,10 +678,7 @@ internal class Program
                                 hits.Add("  " + h);
                             }
 
-                            if (withBoundaryHits == false && ah.Count > 0)
-                            {
-                                withBoundaryHits = true;
-                            }
+                            withBoundaryHits |= ah.Count > 0;
                         }
 
                         offset += chunkSizeBytes;

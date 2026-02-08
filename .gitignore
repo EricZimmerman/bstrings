@@ -193,3 +193,4 @@ ModelManifest.xml
 =======
 /.vs/bstrings/v15/Server/sqlite3
 >>>>>>> e9853207201d203d4afeec3f499c7345a7fc441a
+/dev-tools/benchmark-generator/.vs
