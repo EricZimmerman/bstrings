@@ -1,3 +1,14 @@
+#if !NET6_0_OR_GREATER
+using Directory = Alphaleonis.Win32.Filesystem.Directory;
+using File = Alphaleonis.Win32.Filesystem.File;
+using FileInfo = Alphaleonis.Win32.Filesystem.FileInfo;
+using Path = Alphaleonis.Win32.Filesystem.Path;
+#else
+using Path = System.IO.Path;
+using Directory = System.IO.Directory;
+using File = System.IO.File;
+using FileInfo = System.IO.FileInfo;
+#endif
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
@@ -11,7 +22,6 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Alphaleonis.Win32.Filesystem;
 using DiscUtils;
 using DiscUtils.Ntfs;
 using DiscUtils.Streams;
@@ -20,18 +30,6 @@ using RawDiskLib;
 using Serilog;
 using Serilog.Core;
 using Serilog.Events;
-#if !NET6_0_OR_GREATER
-using Directory = Alphaleonis.Win32.Filesystem.Directory;
-using File = Alphaleonis.Win32.Filesystem.File;
-using FileInfo = Alphaleonis.Win32.Filesystem.FileInfo;
-using Path = Alphaleonis.Win32.Filesystem.Path;
-
-#else
-using Path = System.IO.Path;
-using Directory = System.IO.Directory;
-using File = System.IO.File;
-using FileInfo = System.IO.FileInfo;
-#endif
 
 namespace bstrings;
 
@@ -43,7 +41,7 @@ internal class Program
 
 
     private static readonly string Header =
-        $"bstrings version {Assembly.GetExecutingAssembly().GetName().Version}" +
+        $"bstrings version {Assembly.GetExecutingAssembly().GetName().Version.ToString(3)}" +
         "\r\n\r\nAuthor: Eric Zimmerman (saericzimmerman@gmail.com)" +
         "\r\nhttps://github.com/EricZimmerman/bstrings";
 
@@ -773,7 +771,8 @@ internal class Program
                 }
                 catch (Exception ex)
                 {
-                    Log.Error(ex, "Error setting up regular expression '{RegString}': {Message}", regString, ex.Message);
+                    Log.Error(ex, "Error setting up regular expression '{RegString}': {Message}", regString,
+                        ex.Message);
                 }
             }
 
@@ -855,7 +854,8 @@ internal class Program
                         }
                         catch (Exception ex)
                         {
-                            Log.Error(ex, "Error setting up regular expression '{RegString}': {Message}", regex.ToString(), ex.Message);
+                            Log.Error(ex, "Error setting up regular expression '{RegString}': {Message}",
+                                regex.ToString(), ex.Message);
                         }
                     }
                 }
