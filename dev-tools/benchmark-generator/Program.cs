@@ -34,7 +34,7 @@ internal class Program
         // Step 2: All all test strings that should be found by bstrings
         //
 
-        // Test 1: Unicode text over the end of the second chunk (address 0x27FFFAC)
+        // Test 1: Unicode text over the end of the second chunk (address 0x13FFFE8)
         var chunkBoundaryText = System.Text.Encoding.Unicode.GetBytes("DFIR with bstrings rocks");
         memstream.Position = 20 * 1024 * 1024 - chunkBoundaryText.Length / 2;
         memstream.Write(chunkBoundaryText, 0, chunkBoundaryText.Length);

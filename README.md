@@ -12,9 +12,9 @@ A better strings utility!
             a               If set, look for ASCII strings. Default is true. Use -a false to disable
             b               Chunk size in MB. Valid range is 1 to 1024. Default is 512
             d               Directory to recursively process. Either this or -f is required
-            f               File to search. Either this or -d is required
+            f               File to search. Either this or -d is required. When neither is given, input piped to stdin is searched
             m               Minimum string length. Default is 3
-            o               File to save results to
+            o               File to save results to. Results are appended if the file exists
             p               Display list of built in regular expressions
             q               Quiet mode (Do not show header or total number of hits)
             s               Really Quiet mode (Do not display hits to console. Speeds up processing when using -o)
@@ -33,7 +33,7 @@ A better strings utility!
             mask            When using -d, file mask to search for. * and ? are supported. This option has no effect when using -f
             ms              When using -d, maximum file size to process. This option has no effect when using -f
             ro              When true, list the string matched by regex pattern vs string the pattern was found in (This may result in duplicate strings in output. ~ denotes approx. offset)
-            off             Show offset to hit after string, followed by the encoding (A=1252, U=Unicode)
+            off             Show offset to hit after string, followed by the encoding (A=Code page, U=Unicode)
 
             sa              Sort results alphabetically
             sl              Sort results by length
@@ -83,6 +83,16 @@ Run `bstrings.exe -p` to see the following list of built in Regular Expressions:
               zip             Finds zip codes
               
               To use a built in pattern, supply the Name to the --lr switch 
+
+## How strings are found
+
+Files are read in chunks (`-b`). A string that runs past the end of a chunk is carried over to the next one, so results are the same whatever the chunk size and strings are never split at chunk boundaries. Unicode (UTF-16LE) strings are found at both even and odd byte offsets. With `--off`, the offset is the exact file offset of the first character of the string (after leading whitespace is trimmed).
+
+Exit code 0 means success. Exit code 1 means invalid arguments or a file that could not be read.
+
+## Linux and macOS
+
+The .NET 10 build runs on Linux and macOS. Reading locked files through raw disk access needs Windows.
 
 ## Documentation
 

@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>10</LangVersion>
+    <IsPackable>false</IsPackable>
+    <Copyright>Eric Zimmerman</Copyright>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="FluentAssertions" Version="[7.0.0,8.0.0)" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
+    <PackageReference Include="NUnit" Version="5.0.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="6.3.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Unit tests use the internal scanner and patterns; CLI tests run the built bstrings.dll -->
+    <ProjectReference Include="../bstrings/bstrings.csproj" />
+  </ItemGroup>
+</Project>
