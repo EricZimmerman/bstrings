@@ -156,6 +156,27 @@ public class CliTests
     }
 
     [Test]
+    public void RandomBytesExitWithZero()
+    {
+        // Any file is valid input for bstrings: 1 is only for a failure of the tool, never for the file's contents
+        var data = new byte[64 * 1024];
+        new Random(1).NextBytes(data);
+        var file = Path.Combine(_dir, "random.bin");
+        File.WriteAllBytes(file, data);
+
+        Run("-f", file, "-q", "-s").ExitCode.Should().Be(0);
+    }
+
+    [Test]
+    public void OutputThatCannotBeWrittenExitsWithOne()
+    {
+        var file = WriteFile("a.bin", (8, A("HelloWorld")));
+
+        // the -o folder is an existing file
+        Run("-f", file, "-q", "-o", Path.Combine(file, "out.txt")).ExitCode.Should().Be(1);
+    }
+
+    [Test]
     public void OffsetsAreFileOffsetsWithEncoding()
     {
         var file = WriteFile("a.bin", (0x10, A("HelloWorld")), (0x100, U("EvenUnicode")), (0x201, U("OddUnicode")),

@@ -32,7 +32,7 @@ For changes to scanning or output, also compare old and new builds over real fil
 - `dev-tools/benchmark-generator` writes a 512 MB `benchmark.dmp` with strings planted across chunk boundaries; the expected hits are in its comments (`-f benchmark.dmp --ls bstrings --lr unc -b 10 --off`).
 - `dev-tools/compare-versions-output.ps1` runs two builds over a memory dump with every built-in regex and asserts identical output.
 
-Exit code 0 means success; 1 means invalid arguments or a file that failed.
+Exit codes are 0 or 1 only. 1 is a failure of the tool: invalid arguments, a missing `-f`/`-d`, a file that can't be opened or read (locked and the raw read also failed, IO errors), or an `-o` file that can't be written. Any file is valid input, so file contents never give 1; an empty redirected stdin is 0.
 
 ## Architecture
 
