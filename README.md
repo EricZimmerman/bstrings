@@ -9,7 +9,7 @@ addresses, SIDs, paths, wallet addresses and more). On Windows, locked files are
 | **Version** | 2026.10.0 |
 | **Download** | [.NET 10](https://download.ericzimmermanstools.com/net/bstrings.zip) (recommended) &middot; [.NET Framework 4.7.2](https://download.ericzimmermanstools.com/bstrings.zip) |
 | **All tools** | [ericzimmerman.github.io](https://ericzimmerman.github.io) or [Get-ZimmermanTools](https://download.ericzimmermanstools.com/Get-ZimmermanTools.zip), which downloads them all and keeps them current |
-| **Changes** | [ChangeLog.txt](https://download.ericzimmermanstools.com/ChangeLog.txt) |
+| **Changes** | [ChangeLog](https://ericzimmerman.github.io/changelog/) |
 | **Issues** | [EricZimmerman/bstrings](https://github.com/EricZimmerman/bstrings/issues) or [EricZimmerman/Issues](https://github.com/EricZimmerman/Issues/issues) |
 
 ## Requirements
@@ -151,7 +151,7 @@ are reported and the rest is still searched. Reading locked files through raw di
   points instead of stopping.
 - Exit code 1 when the tool fails (it was always 0). Error reports include source file and line numbers.
 
-The full list is in the [ChangeLog](https://download.ericzimmermanstools.com/ChangeLog.txt).
+The full list is in the [ChangeLog](https://ericzimmerman.github.io/changelog/).
 
 ## Building
 
