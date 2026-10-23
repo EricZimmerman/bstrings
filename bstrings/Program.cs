@@ -516,7 +516,13 @@ internal class Program
         {
             try
             {
-                files.AddRange(EnumerateFiles(Path.GetFullPath(d), string.IsNullOrEmpty(mask) ? "*" : mask));
+                files.AddRange(EnumerateFiles(Path.GetFullPath(d), string.IsNullOrEmpty(mask) ? "*" : mask, out var unreadable));
+
+                //folders that can't be read are reported as they are found; the run goes on and exits 1
+                if (unreadable > 0)
+                {
+                    exitCode = 1;
+                }
             }
             catch (Exception ex)
             {
@@ -793,43 +799,108 @@ internal class Program
         }
     }
 
-    private static IEnumerable<string> EnumerateFiles(string directory, string mask)
+    /// <summary>
+    ///     Files (not empty) under a folder, recursively, matching a mask (case-insensitive), without recursing into
+    ///     junctions/symlinks. A folder that can't be read is reported ("Unable to read folder") and counted in
+    ///     <paramref name="unreadable" />; it used to be skipped silently
+    /// </summary>
+    private static List<string> EnumerateFiles(string directory, string mask, out int unreadable)
     {
 #if NET9_0_OR_GREATER
-        var enumerationOptions = new EnumerationOptions
+        using var finder = new FileFinder(directory, mask);
+        var files = new List<string>();
+        while (finder.MoveNext())
         {
-            IgnoreInaccessible = true,
-            RecurseSubdirectories = true,
-            AttributesToSkip = 0
-        };
+            files.Add(finder.Current);
+        }
 
-        return new FileSystemEnumerable<string>(directory,
-            (ref FileSystemEntry entry) => entry.ToFullPath(), enumerationOptions)
+        foreach (var (folder, reason) in finder.Unreadable)
         {
-            ShouldIncludePredicate = (ref FileSystemEntry entry) =>
-                !entry.IsDirectory && entry.Length > 0 &&
-                FileSystemName.MatchesSimpleExpression(mask, entry.FileName),
-            ShouldRecursePredicate = (ref FileSystemEntry entry) =>
-                (entry.Attributes & FileAttributes.ReparsePoint) == 0
-        };
+            Log.Error("Unable to read folder {Folder}: {Reason}", folder ?? directory, reason);
+        }
+
+        unreadable = finder.Unreadable.Count;
+        return files;
 #else
         var maskRegex = new Regex("^" + Regex.Escape(mask).Replace(@"\*", ".*").Replace(@"\?", ".") + "$",
             RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+        var errors = 0;
 
         var filters = new DirectoryEnumerationFilters
         {
             InclusionFilter = fsei => fsei.FileSize > 0 && maskRegex.IsMatch(fsei.FileName),
             RecursionFilter = fsei => !fsei.IsMountPoint && !fsei.IsSymbolicLink,
-            ErrorFilter = (errorCode, errorMessage, pathProcessed) => true
+            ErrorFilter = (errorCode, errorMessage, pathProcessed) =>
+            {
+                Log.Error("Unable to read folder {Folder}: {Reason}", pathProcessed, errorMessage);
+                errors += 1;
+                return true;
+            }
         };
 
+        //no ContinueOnException: with it, AlphaFS never calls ErrorFilter
         var options = DirectoryEnumerationOptions.Files | DirectoryEnumerationOptions.Recursive |
-                      DirectoryEnumerationOptions.SkipReparsePoints | DirectoryEnumerationOptions.ContinueOnException |
+                      DirectoryEnumerationOptions.SkipReparsePoints |
                       DirectoryEnumerationOptions.BasicSearch;
 
-        return Directory.EnumerateFileSystemEntries(directory, options, filters);
+        var files = Directory.EnumerateFileSystemEntries(directory, options, filters).ToList();
+        unreadable = errors;
+        return files;
 #endif
     }
+
+#if NET9_0_OR_GREATER
+    /// <summary>
+    ///     The search for EnumerateFiles (as FileSystemEnumerable with IgnoreInaccessible did), but folders that can't be read
+    ///     are skipped and kept in Unreadable
+    /// </summary>
+    private sealed class FileFinder : FileSystemEnumerator<string>
+    {
+        private readonly string _mask;
+
+        //the subfolder whose handle is opened right after ShouldRecurseIntoEntry; an error then is about that folder
+        private string _lastRecursed;
+
+        //folder (null: the folder searched, as the base constructor can report it before this one runs) and reason
+        public readonly List<(string Folder, string Reason)> Unreadable = new();
+
+        public FileFinder(string directory, string mask) : base(directory,
+            new EnumerationOptions { IgnoreInaccessible = false, RecurseSubdirectories = true, AttributesToSkip = 0 })
+        {
+            _mask = mask;
+        }
+
+        protected override bool ShouldRecurseIntoEntry(ref FileSystemEntry entry)
+        {
+            if ((entry.Attributes & FileAttributes.ReparsePoint) != 0)
+            {
+                return false;
+            }
+
+            _lastRecursed = entry.ToFullPath();
+            return true;
+        }
+
+        protected override bool ShouldIncludeEntry(ref FileSystemEntry entry)
+        {
+            _lastRecursed = null;
+            return !entry.IsDirectory && entry.Length > 0 && FileSystemName.MatchesSimpleExpression(_mask, entry.FileName);
+        }
+
+        protected override string TransformEntry(ref FileSystemEntry entry)
+        {
+            return entry.ToFullPath();
+        }
+
+        protected override bool ContinueOnError(int error)
+        {
+            Unreadable.Add((_lastRecursed, new System.ComponentModel.Win32Exception(error).Message));
+            _lastRecursed = null;
+            return true;
+        }
+    }
+#endif
 
     private static Stream OpenForRead(string file)
     {

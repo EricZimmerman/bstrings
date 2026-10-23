@@ -2,6 +2,8 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Security.AccessControl;
+using System.Security.Principal;
 using System.Text;
 using FluentAssertions;
 using NUnit.Framework;
@@ -174,6 +176,45 @@ public class CliTests
 
         // the -o folder is an existing file
         Run("-f", file, "-q", "-o", Path.Combine(file, "out.txt")).ExitCode.Should().Be(1);
+    }
+
+    [Test]
+    public void UnreadableFolderIsReportedAndExitsWithOne()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            Assert.Ignore("Denying access to a folder needs Windows ACLs");
+            return;
+        }
+
+        WriteFile("a.bin", (8, A("HelloWorld")));
+        var locked = Path.Combine(_dir, "locked");
+        WriteFile(Path.Combine("locked", "b.bin"), (8, A("HiddenText")));
+
+        var info = new DirectoryInfo(locked);
+        var rule = new FileSystemAccessRule(WindowsIdentity.GetCurrent().User!, FileSystemRights.ReadAndExecute,
+            InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit, PropagationFlags.None,
+            AccessControlType.Deny);
+        var security = info.GetAccessControl();
+        security.AddAccessRule(rule);
+        info.SetAccessControl(security);
+
+        try
+        {
+            var result = Run("-d", _dir);
+
+            // the rest of the folder is still searched; the folder that can't be read is named and gives 1
+            result.ExitCode.Should().Be(1);
+            result.Output.Should().Contain("HelloWorld");
+            result.Output.Should().NotContain("HiddenText");
+            result.Output.Should().Contain("Unable to read folder").And.Contain(locked);
+        }
+        finally
+        {
+            security = info.GetAccessControl();
+            security.RemoveAccessRule(rule);
+            info.SetAccessControl(security);
+        }
     }
 
     [Test]

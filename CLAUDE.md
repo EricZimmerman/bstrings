@@ -32,7 +32,7 @@ For changes to scanning or output, also compare old and new builds over real fil
 - `dev-tools/benchmark-generator` writes a 512 MB `benchmark.dmp` with strings planted across chunk boundaries; the expected hits are in its comments (`-f benchmark.dmp --ls bstrings --lr unc -b 10 --off`).
 - `dev-tools/compare-versions-output.ps1` runs two builds over a memory dump with every built-in regex and asserts identical output.
 
-Exit codes are 0 or 1 only. 1 is a failure of the tool: invalid arguments, a missing `-f`/`-d`, a file that can't be opened or read (locked and the raw read also failed, IO errors), or an `-o` file that can't be written. Any file is valid input, so file contents never give 1; an empty redirected stdin is 0.
+Exit codes are 0 or 1 only. 1 is a failure of the tool: invalid arguments, a missing `-f`/`-d`, a file that can't be opened or read (locked and the raw read also failed, IO errors), a folder under `-d` that can't be read (logged as "Unable to read folder <path>: <reason>"; the rest is still searched), or an `-o` file that can't be written. On net472 the AlphaFS search has an `ErrorFilter` for this and must not use `ContinueOnException` (with it AlphaFS never calls the filter). Any file is valid input, so file contents never give 1; an empty redirected stdin is 0.
 
 ## Architecture
 
@@ -51,7 +51,7 @@ The CLI and search loop are in `bstrings/Program.cs`; the scanner is in `bstring
 
 `#if NET9_0_OR_GREATER` separates the targets:
 - **net472** aliases `File`/`Directory`/`Path`/`FileInfo` to AlphaFS (long paths) and enumerates with `DirectoryEnumerationFilters`; the scanner makes a string per chunk and uses `Match`/`NextMatch`.
-- **net10.0** uses `System.IO` with `FileSystemEnumerable` (skip empty files and inaccessible folders, don't recurse into reparse points); the scanner uses `Regex.EnumerateMatches` over a span, avoiding the per-chunk string.
+- **net10.0** uses `System.IO` with a `FileSystemEnumerator` (`FileFinder`: skip empty files, don't recurse into reparse points; folders that can't be read are skipped and reported); the scanner uses `Regex.EnumerateMatches` over a span, avoiding the per-chunk string.
 
 Keep both branches behaving the same and build both targets. AlphaFS is Win32-only, so the net472 build can't be run under Mono.
 
