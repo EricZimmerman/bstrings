@@ -7,8 +7,8 @@ namespace bstrings;
 /// <summary>--co (Issues #259): the console messages are also saved to &lt;yyyyMMddHHmmss&gt;_bstrings_&lt;version&gt;_ConsoleLog.txt in the output directory</summary>
 internal static class ConsoleLog
 {
-    /// <summary>The console's template with time and level. {Message:l}, not :lj: the file sink writes values other than strings as JSON
-    /// with :j (dates as quoted ISO 8601 instead of the --dt format)</summary>
+    /// <summary>The console's template with time and level. {Message:l}, not :lj: with :j the file sink writes values other than
+    /// strings as JSON (quoted dates instead of the --dt format, quoted enum names), which the console doesn't</summary>
     public const string Template = "[{Timestamp:HH:mm:ss.fff} {Level:u3}] {Message:l}{NewLine}{Exception}";
 
     /// <summary>The log file in the first output directory given (the time is UTC)</summary>
