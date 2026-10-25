@@ -223,8 +223,8 @@ internal class Program
         };
         var coOpt = new Option<bool>("--co")
         {
-            Description = "Save all console messages to <timestamp>_bstrings_<version>_ConsoleLog.txt in the folder of the -o file",
-            DefaultValueFactory = _ => false
+            Description = "When true, save all console messages to <timestamp>_bstrings_<version>_ConsoleLog.txt in the folder of the -o file. Use --co false to turn it off",
+            DefaultValueFactory = _ => true
         };
 
         _rootCommand = new RootCommand
@@ -567,11 +567,6 @@ internal class Program
             }
         }
 
-        if (co && consoleLog == null)
-        {
-            Log.Warning("--co: no output directory was given, so the console messages are not saved");
-            Console.WriteLine();
-        }
 
         StreamWriter fileWriter = null;
 

@@ -321,16 +321,17 @@ public class CliTests
     [Test]
     public void ConsoleLog()
     {
-        //Issues #259: --co saves the console messages (not the hits) to <yyyyMMddHHmmss>_bstrings_<version>_ConsoleLog.txt in the folder of -o
+        //Issues #259: --co (on by default) saves the console messages (not the hits) to <yyyyMMddHHmmss>_bstrings_<version>_ConsoleLog.txt in the folder of -o
         var file = WriteFile("a.bin", (8, A("HelloWorld")));
         var dir = Path.Combine(_dir, "out");
         var output = Path.Combine(dir, "hits.txt");
 
-        var result = Run("-f", file, "-o", output);
+        var result = Run("-f", file, "-o", output, "--co", "false");
         result.ExitCode.Should().Be(0, result.Output);
         Directory.GetFiles(dir, "*_ConsoleLog.txt").Should().BeEmpty();
+        result.Output.Should().NotContain("Console log:");
 
-        result = Run("-f", file, "-o", output, "--co");
+        result = Run("-f", file, "-o", output);
         result.ExitCode.Should().Be(0, result.Output);
         var log = Directory.GetFiles(dir, "*_ConsoleLog.txt").Should().ContainSingle().Subject;
         Path.GetFileName(log).Should().MatchRegex(@"^\d{14}_bstrings_\d+\.\d+\.\d+_ConsoleLog\.txt$");
@@ -339,10 +340,10 @@ public class CliTests
         text.Should().MatchRegex(@"\[\d\d:\d\d:\d\d\.\d{3} INF\] bstrings version ");
         text.Should().Contain("Command line: -f ").And.Contain("Saving hits to").And.NotContain("HelloWorld\n");
 
-        //no -o: a warning, and the search still runs
+        //no -o: no log and no warning, and the search still runs
         result = Run("-f", file, "--co");
         result.ExitCode.Should().Be(0, result.Output);
-        result.Output.Should().Contain("--co: no output directory was given").And.Contain("HelloWorld");
+        result.Output.Should().NotContain("--co:").And.NotContain("Console log:").And.Contain("HelloWorld");
     }
 
     [Test]
