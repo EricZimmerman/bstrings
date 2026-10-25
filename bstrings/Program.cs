@@ -221,6 +221,11 @@ internal class Program
             Description = "Show trace information during processing",
             DefaultValueFactory = _ => false
         };
+        var coOpt = new Option<bool>("--co")
+        {
+            Description = "Save all console messages to <timestamp>_bstrings_<version>_ConsoleLog.txt in the folder of the -o file",
+            DefaultValueFactory = _ => false
+        };
 
         _rootCommand = new RootCommand
         {
@@ -249,7 +254,8 @@ internal class Program
             saOpt,
             slOpt,
             debugOpt,
-            traceOpt
+            traceOpt,
+            coOpt
         };
 
         _rootCommand.Description = Header + "\r\n\r\n" + Footer;
@@ -260,7 +266,7 @@ internal class Program
             result.GetValue(lsOpt), result.GetValue(lrOpt), result.GetValue(fsOpt), result.GetValue(frOpt),
             result.GetValue(arOpt), result.GetValue(urOpt), result.GetValue(cpOpt), result.GetValue(maskOpt),
             result.GetValue(msOpt), result.GetValue(roOpt), result.GetValue(offOpt), result.GetValue(saOpt),
-            result.GetValue(slOpt), result.GetValue(debugOpt), result.GetValue(traceOpt)));
+            result.GetValue(slOpt), result.GetValue(debugOpt), result.GetValue(traceOpt), result.GetValue(coOpt)));
 
         var exitCode = await _rootCommand.Parse(args).InvokeAsync();
 
@@ -271,7 +277,7 @@ internal class Program
 
     private static int DoWork(string f, string d, string o, bool a, bool u, int m, int b, bool q, bool s, int x,
         bool p, string ls, string lr, string fs, string fr, string ar, string ur, int cp, string mask, long ms,
-        bool ro, bool off, bool sa, bool sl, bool debug, bool trace)
+        bool ro, bool off, bool sa, bool sl, bool debug, bool trace, bool co)
     {
         var levelSwitch = new LoggingLevelSwitch();
 
@@ -292,6 +298,24 @@ internal class Program
         var conf = new LoggerConfiguration()
             .WriteTo.Console(outputTemplate: template)
             .MinimumLevel.ControlledBy(levelSwitch);
+
+        string consoleLog = null;
+        if (co && string.IsNullOrEmpty(o) == false)
+        {
+            try
+            {
+                consoleLog = ConsoleLog.GetPath(DateTimeOffset.UtcNow, Path.GetDirectoryName(Path.GetFullPath(o)));
+            }
+            catch (Exception)
+            {
+                //not a valid path: reported when -o is opened
+            }
+        }
+
+        if (consoleLog != null)
+        {
+            conf.WriteTo.File(consoleLog, outputTemplate: ConsoleLog.Template);
+        }
 
         Log.Logger = conf.CreateLogger();
 
@@ -364,7 +388,7 @@ internal class Program
 
         try
         {
-            return Search(f, d, o, a, u, m, b, q, s, x, ls, lr, fs, fr, ar, ur, codePage, mask, ms, ro, off, sa, sl);
+            return Search(f, d, o, a, u, m, b, q, s, x, ls, lr, fs, fr, ar, ur, codePage, mask, ms, ro, off, sa, sl, co, consoleLog);
         }
         finally
         {
@@ -384,7 +408,7 @@ internal class Program
 
     private static int Search(string f, string d, string o, bool a, bool u, int m, int b, bool q, bool s, int x,
         string ls, string lr, string fs, string fr, string ar, string ur, Encoding codePage, string mask, long ms,
-        bool ro, bool off, bool sa, bool sl)
+        bool ro, bool off, bool sa, bool sl, bool co, string consoleLog)
     {
         var exitCode = 0;
 
@@ -534,6 +558,18 @@ internal class Program
         if (!q)
         {
             Log.Information("Command line: {Args}", string.Join(" ", Environment.GetCommandLineArgs().Skip(1)));
+            Console.WriteLine();
+
+            if (consoleLog != null)
+            {
+                Log.Information("Console log: {Path}", consoleLog);
+                Console.WriteLine();
+            }
+        }
+
+        if (co && consoleLog == null)
+        {
+            Log.Warning("--co: no output directory was given, so the console messages are not saved");
             Console.WriteLine();
         }
 

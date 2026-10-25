@@ -6,7 +6,7 @@ addresses, SIDs, paths, wallet addresses and more). On Windows, locked files are
 
 | | |
 |---|---|
-| **Version** | 2026.10.0 |
+| **Version** | 2026.10.1 |
 | **Download** | [.NET 10](https://download.ericzimmermanstools.com/net/bstrings.zip) (recommended) &middot; [.NET Framework 4.7.2](https://download.ericzimmermanstools.com/bstrings.zip) |
 | **All tools** | [ericzimmerman.github.io](https://ericzimmerman.github.io) or [Get-ZimmermanTools](https://download.ericzimmermanstools.com/Get-ZimmermanTools.zip), which downloads them all and keeps them current |
 | **Changes** | [ChangeLog](https://ericzimmerman.github.io/changelog/) |
@@ -51,6 +51,7 @@ Options:
   --sl            Sort results by length
   --debug         Show debug information during processing
   --trace         Show trace information during processing
+  --co            Save all console messages to <timestamp>_bstrings_<version>_ConsoleLog.txt in the folder of the -o file
   -?, -h, --help  Show help and usage information
   --version       Show version information
 ```
@@ -77,6 +78,8 @@ bstrings.exe -f "C:\Temp\UsrClass 1.dat" --ls mui --sl
 - **Console**: one string per line, after a header and followed by the total number of hits (`-q` leaves those out,
   `-s` doesn't show the strings).
 - **File** (`-o`): the same strings, appended if the file exists.
+- **Console log** (`--co`): the console messages (header, command line, counts, warnings; not the strings), with times
+  and levels, in `<yyyyMMddHHmmss>_bstrings_<version>_ConsoleLog.txt` (UTC time) in the folder of the `-o` file.
 - With `--off`, each string is followed by its offset in the file and its encoding (`A` for code page, `U` for
   Unicode). `--sa` and `--sl` sort the results alphabetically or by length.
 
@@ -150,6 +153,8 @@ are reported and the rest is still searched. Reading locked files through raw di
 - `-f` and `-d` work when input is redirected (#17); directory scans skip inaccessible folders, empty files and reparse
   points instead of stopping.
 - Exit code 1 when the tool fails (it was always 0). Error reports include source file and line numbers.
+- New `--co`: saves the console messages to `<timestamp>_bstrings_<version>_ConsoleLog.txt` in the folder of the `-o`
+  file (Issues #259) (2026.10.1)
 
 The full list is in the [ChangeLog](https://ericzimmerman.github.io/changelog/).
 
